@@ -1,15 +1,19 @@
---COMPILING THE PROGRAM--
-
-Download the Jo Engine source code (https://www.jo-engine.org/download/ or https://github.com/johannes-fetz/joengine), then move the 'Tethys-main' folder into the main 'joengine-master' folder (the one with 'FAQ.txt' and 'LICENSE'), such that opening 'Tethys-main' takes you to a new folder with the folders 'Calypso' and 'PROJ'. Open 'Calypso', then copy its full path and move to it in the command line window ('chdir <path>' in Command Prompt, 'cd <path>' in the terminal). Run 'compile.bat' (Windows) or 'compile.sh' (Linux) here to build the program, and run clean.bat/.sh beforehand to remove any excess files (this usually isn't a problem, though).
-
-Note that this step only compiles the portion of the program that runs on the main processors of the Saturn. The code that actually controls the sound registers is located in the 'PROJ' folder; repeating the above steps with that folder instead will compile the sound driver and move it into 'Calypso''s data folder. If you do not wish to copy the sound driver automatically after compilation, simply remove the 'COPY' statement from 'compile.bat' in your favorite text editor. These steps are only necessary if you want to change the sound driver, though, as the original, precompiled driver is already included in 'Calypso'.
-
 --RUNNING THE PROGRAM--
+
+If you don't plan on changing the samples (or any other aspect of the program), this is the only section you need to read.
 
 Open the 'Tethys-main' folder, then navigate to the 'Calypso' folder and copy its full path. Move to this path in the command line window ('chdir <path>' in Command Prompt, 'cd <path>' in the terminal), then perform one of the two different steps:
  -Open the 'run_with_****' file corresponding to your preferred emulator and current operating system ('*.bat' for Windows, '*.sh' for Linux) in a text editor, then change any included variables like 'EMULATOR_DIR' or 'EXECUTABLE_PATH' to the directories and/or locations of your emulator. Once you're finished, return to the command line window and run that .bat or .sh file.
  -Add the folder containing your desired emulator to your computer's PATH, then return to the command line and run the executable file for the emulator with the 'game.cue' file (typically in the format '<emulator> game.cue'.
 
 By default, emulators will run Calypso using an emulated Saturn controller, which severely limits the program's capabilities. For the full Calypso experience, the controller in the first port should be swapped out for a keyboard. In mednafen, this can be done by creating a text file in the 'mednafen' folder's 'pgconfig' folder called 'game.ss.cfg' with the line 'ss.input.port1 keyboard' (change 'keyboard' to 'gamepad' if you ever want to use the gamepad again), while most other emulators will have a GUI to handle the input change. While using a keyboard in Mednafen, make sure to press 'Ctrl + Shift + Menu' while starting the program to enable input grabbing, then use the same input when you're finished to relinquish the emulator's control.
+
+--RECOMPILING THE PROGRAM--
+
+Download the Jo Engine source code (https://www.jo-engine.org/download/ or https://github.com/johannes-fetz/joengine), then move the 'Tethys-main' folder into the main 'joengine-master' folder (the one with 'FAQ.txt' and 'LICENSE'), such that opening 'Tethys-main' takes you to a new folder with the folders 'Calypso' and 'PROJ'. Open 'Calypso', then copy its full path and move to it in the command line window ('chdir <path>' in Command Prompt, 'cd <path>' in the terminal). Run 'compile.bat' (Windows) or 'compile.sh' (Linux) here to build the program, and run clean.bat/.sh beforehand to remove any excess files (this usually isn't a problem, though).
+
+Note that this step only compiles the portion of the program that runs on the main processors of the Saturn. The code that actually controls the sound registers is located in the 'PROJ' folder; repeating the above steps with that folder instead will compile the sound driver and move it into 'Calypso''s data folder. If you do not wish to copy the sound driver automatically after compilation, simply remove the 'COPY' statement from 'compile.bat' in your favorite text editor. These steps are only necessary if you want to change the sound driver, though, as the original, precompiled driver is already included in 'Calypso'.
+
+
 
 
