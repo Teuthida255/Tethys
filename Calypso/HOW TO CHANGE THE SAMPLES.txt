@@ -1,0 +1,112 @@
+--HOW TO CHANGE THE SAMPLES IN CALYPSO--
+
+Looking for some more spice in your Sega Saturn music demo program? Tired of playing with the same old waveforms day in and day out? Just plain deperate to hear what a frequency-modulated steel drum sounds like? This document is for you.
+
+
+--SAMPLE FORMAT--
+
+None of the advice from elsehwere in this document will matter if your samples are in the wrong format to begin with (garbage in, garbage out, as the saying goes). The SCSP can only play sample data in one of two possible formats:
+ -Uncompressed, headerless signed 8-bit PCM in mono
+ -Uncompressed, headerless signed 16-bit PCM in mono with big-endian byte order
+
+Since your average audio file from 2024 is unlikely to fit all of these criteria, whatever samples you want to play on the Saturn will need to be converted into one of its desired formats. You have two means of accomplishing this goal:
+
+Method 1 - ffmpeg:
+ If you have ffmpeg (and you really should!), you can convert your files by invoking the following command in the terminal or command prompt, replacing %this% with the name of your file, and (bitrate) with your desired sample rate:
+  ffmpeg -i %this%.wav -f s16be -ac 1 -ar (bitrate) %this%.PCM (for 16-bit samples)
+  ffmpeg -i %this%.wav -f s8 -ac 1 -ar (bitrate) %this%.PCM (for 8-bit samples)
+
+ This is an efficient and quick way to convert samples, but it unfortunately does not allow you to hear how the conversion process affected your sample without playing it in another program (which has now been complicated by removed the header's metadata)
+
+Method 2 - Audacity:
+ Audacity gives you the freedom to experiment with your samples (for instance, by normalizing and/or equalizing the audio in preparation for any potential quality loss or trimming the sample to reduce its size) and hear the effects of your conversion before committing to your exported file, but comes at the expense of speed and slightly more hassle when exporting 16-bit PCM. To export your sample, go to File->Export Audio (or press CTRL+SHIFT+E) and choose the following options:
+  -Format: 'Other uncompressed files'
+  -Channels: 'Mono'
+  -Sample Rate: Your choice :)
+  -Header: 'RAW (header-less)'
+  -Encoding: 'Signed 8-bit PCM' or 'Signed 16-bit PCM'
+ You should now notice that the 16-bit option doesn't include any options to select the endian-ness of the final export, despite the fact that we need our final file to be in big-endian order. Since Audacity (at least on my machine) exports its 16-bit audio as little-endian, you'll have to account for Keary's mistakes by going to File->Import->Raw Data, selecting the exported file, setting the encoding to 'Signed 16-bit PCM' and the byte order to 'Big-endian' (the sample rate doesn't actually matter here), then exporting the file again, which will move the bytes into the proper order.
+
+(You might note that the ffmpeg approach mentioned here exports your audio as *.PCM files, while Audacity will export them as .raw files. The Saturn only cares about the data within the samples rather than the file extension, so the extension doesn't actually matter.)
+
+There are three other important limitations on SCSP audio files: their size can be no larger than 65536 (2^16) samples, so 8-bit audio has a maximum size of 64 KiB and 16-bit audio has a maximum size of 128 KiB; the name of the file (not counting the extension) must be 8 characters or fewer in length, and the combined file size of all loaded files must fit into the SCSP's RAM (about 450 KiB). The 'SCSP SAMPLE TRICKS' section will cover ways to adjust samples to fit within these constraints.
+
+
+--LOADING SAMPLES--
+
+Before you can start loading different samples into Calypso, they need to be in a place where Calypso can find them. Open the project's folder, then navigate to the 'cd' folder within 'Calypso'. Move any samples you want to use here.
+
+To actually add your samples in, go back to the 'Calypso' folder and open 'sample.h' in a text editor of your choosing. You should see a large list of values, along with the lines '#define NumberOfSamples 32' and '#define UseDefaultMultiSamples 1' above that list. Let's start by examining those two '#define' statements:
+ -Changing the number in '#define NumberOfSamples 32' allows you to set how many samples Calypso should use, up to a maximum of 32. This number should be equal to how many lines are in the large list.
+ -By default, Calypso arranges the last 8 samples into a drum kit sample map and the 16th, 17th, and 18th samples into a simple keysplit sample map. If your own sample order is not amenable to this layout, you can change the 1 in '#define UseDefaultMultiSamples 1' to a 0 to begin the program with blank sample maps.
+
+Each entry in the list itself consists of 8 data points that decide what and how samples should be loaded when Calypso starts, which are the following:
+ -The name of your file, in all-caps and surrounded by double quote marks (e.g. sine128.raw becomes "SINE128.RAW")
+ -The base sample rate of your file (setting this to 0 will use a default value designed to play 256-sample-long waveforms in tune)
+ -The data format of your sample, set to one of 6 values based on the bit depth of your audio (either 8-bit or 16-bit) and some extra loading behaviors (these will be explained in more depth later in the 'HANDLING FM' section; if you're unsure, use the 'FM_Padding' settings for short waveform samples, 'Silence_At_Start' for longer samples you expect to use FM on, and the defaults for everything else):
+  -PCM_8_Bit
+  -PCM_16_Bit
+  -PCM_8_Bit_With_FM_Padding
+  -PCM_16_Bit_With_FM_Padding
+  -PCM_8_Bit_With_Silence_At_Start
+  -PCM_16_Bit_With_Silence_At_Start
+ -The looping behavior of your sample; that is, what it should do once the sample reaches its loop end point:
+  -No_Loop (end the sample)
+  -Forward_Loop (returns to the loop start point)
+  -Reverse_Loop (same as Forward_Loop, but plays the looped part of the sample in reverse)
+  -Alternating_Loop (Plays the looped part of the sample in reverse, but then plays the sample forwards again once it reaches the loop start point; also called 'ping-pong loop' by several audio programs)
+ -The number of audio samples from the start of the file that the SCSP should begin the sample at. For reasons that should be clear, this cannot be larger than the size of the sample itself. This is usually 0, but some samples can benifit from setting it to another value (more on this in the 'HANDLING FM' section).
+ -The position of the sample's loop start point, in audio samples counting from the aforementioned sample start point. As such, the loop start point cannot be greater than the sample size minus the sample start point. Set this to 0 to loop the entire sample.
+ -The position of the sample's loop end point, in audio samples counting from the sample start point. As such, it has the same restrictions on the loop start point, and cannot be lower than this value. Setting this to 0 will set the loop end point to the sample's endpoint.
+ -The 'base note' of the sample; that is, what note will play the sample at its base sample rate. This value ranges from -96 to 95, representing how many semitones below or above C-0 the base note should be (0, as you expect, sets the base note to C-0).
+
+Once you've finished editing the sample list, build the program again (check 'HOW TO RUN THIS.txt' for detailed instructions) then run it with your preferred play system. Loading samples correctly is entirely dependent on you following the correct format for the sample list, so if you see any errors or warning from the command line while compiling, stop compiling immediately and inspect samples.h for discrepancies:
+ -Are the number of entries in the list and NumberOfSamples equal?
+ -Are each of the data blocks enclosed in brackets, and are each of the data points separated by commas?
+ -Does each data block end in a comma?
+ -Is the file name enclosed in double quote marks?
+ -Are the sample start and loop points within the SCSP's maximum sample length?
+Calypso itself will note any additional errors not caught by the compiler, mostly pertaining to using invalid values for data points.
+
+
+--HANDLING FM--
+
+Frequency modulation on the Sega Saturn works by using the modulators' audio position to offset the playback position of the carrier's sample by up to 128 audio samples ahead of or behind its 'expected' location:
+ 	_   	_
+	/ \ 	/ \
+   /   \   /   \
+ _/ 	\_/ 	\_
+ |<------|------>|    
+Read   Normal   Read
+Point  Read 	Point
+w/FM   Point	w/FM
+
+This method does not check for loop points or the edges of a sample's data, so a sufficiently strong modulator sufficiently close to the start of end of a sample will cause it to read sample data outside its intended range:
+
+ 	_   	_
+	/ \ 	/ \
+ ww	\   /   \|~
+w  w	\_/ 	~
+ |<------|------>|    
+Other  Normal   Also
+Data   Read 	Other
+   	Point	Data
+
+As such, any sample that you want to perform modulation on needs some kind of padding in its data to prevent this scenario from playing out (unless you're into that sort of thing). The 'With_FM_Padding' settings in the sample load list accomplish this by repeatedly loading the sample in consecutive parts of memory and placing the sample start and loop points for the sample in the central waveform, which works wonders for simple looping samples, but is ill-suited to more complex samples with large differences between their beginnings and ends. If a sample fades in, you can solve one half of the problem using the 'With_Silence_At_Start' options, which will insert silence in between the new sample and the one before it; you can guard the end of the sample by using an external editor to insert around 128 audio samples of either silence (if the sample fades out) or the start of the sample's loop area (if the sample does not) and setting the loop end point of the sample to the start of this padding region. For certain types of samples, like the raw noise sample included with Calypso, you can also guard against FM bugs by simply setting the sample start point to somewhere later in the sample.
+
+
+--SCSP SAMPLE TRICKS--
+
+The SCSP (or, at least, how Mednafen implements the SCSP) is afflicted with a pernicious bug that appears most often when using alternating and reverse loops. If the SCSP is asked to play a sample with a sufficiently small loop area (from a combination of the natural size of the loop area and the 'squeezing' of the loop area's size that comes with playing the sample at higher pitches), the playback cursor will 'skip' over the loop point, typically playing a large chunk of audio data beyond the intended end of the sample. As far as I'm aware, this problem cannot truly be prevented, but you can avoid the bug by avoiding alternating and reverse loops when using short looped samples at higher pitches.
+
+16-bit samples automatically take up twice the space of 8-bit samples, so they should generally be avoided unless the 8-bit sample's quantization errors noticeably affect sound quality. If further compression is needed, lowering the sample rate will easily reduce the size at the cost of losing higher frequencies in the sample. In Audacity, this can be done in the export menu by choosing 'Other' for the sample rate and entering your desired value, but you can also apply the downsampling early to hear its effects by going to Tracks->Resample (you'll still need to set the sample rate again while exporting, though).
+
+If you are ripping your samples from a Soundfont or similar sample bank format, you can usually get the sample's loop points by inspecting the bank's data. Otherwise, you'll have to find or create the loops yourself by inspecting the waveform in Audacity and finding two audio samples to serve as the loop start and end points. Although perfect looping isn't possible for every sample, there are some approaches that generally lead to better loop points than others:
+ -Try to find a distinctive feature of the sample's waveform (like a sharp spike) and make sure that both of your loop points lay on one of those spots.
+ -Try to keep your loop points as close to each other vertically as possible.
+ -Press CTRL+B in Audacity to set a marker where your cursor is, allowing you to keep track of where your loop points are.
+ -Select the region from the start to the end of your loop area (much easier with markers), then right-click the timer bar and select 'Set Loop to Selection', then click the loop icon next to the red record button. When you play your sample, playback will now loop where your loop area is, although Audacity's playback sometimes adds skips and gaps that aren't really in the sample.
+ -If you're still having trouble finding a smooth loop point, a longer loop area can (to some extent) disguise the looping seam.
+ -If this also fails, using an alternating loop is guaranteed to introduce seams to your loop, but to a lesser degree than a rough forward loop point.
+
+You can see the exact position of your loop points in the 'Selection' tab at the bottom of the window by clicking the dropdown arrow there and selecting 'samples', then moving the cursor to the point you want to check. This value is based on the project's sample rate, not the track's, so be sure to change the project rate in Edit->Preferences (or CTRL+P) to see the actual number of samples. If your loop points are greater than 65536, you should downsample the audio further to keep the loop's size within the SCSP's limitations.

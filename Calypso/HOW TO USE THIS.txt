@@ -1,0 +1,511 @@
+--OVERVIEW--
+
+Calypso's editor uses a simple text-based interface to allow you to shape the various parameters of the SCSP's sound hardware and software. The audio ultimately produced by the Sega Saturn is determined by five interconnected layers that organize these parameters:
+ -Instruments (parameters that affect the texture of the sound, operate on Samples)
+ -Samples (PCM audio data and parameters related to PCM audio data)
+ -Multi-Samples (collections of Samples that allow a single Instrument to play multiple Samples)
+ -Macros (sequences of parameter values that allow Instruments to have parameter envelopes)
+ -Channels (parameters that affect how Instruments are played, like pitch and volume)
+A single Channel plays an Instrument, which reads from a Sample (or reads a Multi-Sample to determine which Sample to use) to determine which sound to play, and can be affected by one or more Macros. Since the program stores multiple copies of all layers (except for Channels), you can create and edit many different types of sounds in a single Calypso session and switch between them at your leisure. Later sections in this document will cover these layers in far greater detail.
+
+
+--CONTROLS--
+
+Calypso is best used using a keyboard, which allows you to play multiple notes at multiple pitches without the need to manually change the pitch of each individual channel. In the interest of fairness, though, the controls when using Calypso with a standard Saturn controller are as follows:
+ -Basic Editing Controls:
+  -Up/Down: Move the cursor up or down
+  -Left/Right: Lower or raise, respectively, the currently selected value
+  -L/R: Switch to an earlier or later (respectively) Instrument, Sample, Channel, etc.
+  -Y/Z: Move to a higher or lower (respectively) editing layer
+   (The order of layers is, from highest to lowest, Multi-Sample, Sample, Instrument, Macro, Channel)
+  -A: Play the current Patch (more on Patches in a later section)
+  -X: Play only the current Instrument while held (see above)
+  -Start: Stop all sounds and open the help/credits screen (press Start again to close it)
+ -Modifiers:
+  -B: Hold to increase the strength of moving the cursor and changing values
+  -C: Hold to move the cursor and change values while their respective buttons are held instead of just when they are pressed
+
+When using a keyboard, the controls works as follows instead:
+ -Basic Editing Controls:
+  -Up/Down: Move the cursor up or down
+  -Left/Right: Lower or raise, respectively, the currently selected value
+  -Tab + Left/Right: Switch to an earlier or later (respectively) Instrument, Sample, Channel, etc.
+  -Tab + Up/Down: Move to a higher or lower (respectively) editing layer
+   (The order of layers is, from highest to lowest, Multi-Sample, Sample, Instrument, Macro, Channel)
+  -Various Keys: Play the current Patch (more on Patches in a later section, more on keys below)
+  -Shift: Play only the current Instrument while held(see above)
+  -F3/F4: Lower or raise (respectively) the current Octave (more on octaves below)
+  -Escape: Stop all sounds and open the help/credits screen (press Start again to close it)
+ -Modifiers:
+  -Ctrl: Hold to increase the strength of moving the cursor and changing values
+  -Alt: Hold to move the cursor and change values while their respective buttons are held instead of just when they are pressed
+
+--PLAYING NOTES--
+
+When using a controller, only one note can be played at a time (by holding A), and the pitch of this note can only be changed through the Channel Editor. While using the keyboard, most keys now map to different notes, allowing for chords and polyphonic lines. The mapping used is adapted from 0CC-FamiTracker's keyboard, and resembles two piano keyboards superimposed on top of the two halves of the computer keyboard:
+ Key  | Note   Key  | Note
+ -----------   -----------  
+  Z   | C-0     Q   | C-1  
+  S   | C#0     2   | C#1 
+  X   | D-0     W   | D-1
+  D   | D#0     3   | D#1
+  C   | E-0     E   | E-1
+  V   | F-0     R   | F-1
+  G   | F#0     5   | F#1
+  B   | G-0     T   | G-1
+  H   | G#0     6   | G#1
+  N   | A-0     Y   | A-1
+  J   | A#0     7   | A#1
+  M   | B-0     U   | B-1
+  <   | C-1     I   | C-2
+  L   | C#1     9   | C#2
+  >   | D-1     O   | D-2
+  :   | D#1     )   | D#2
+  ?   | E-1     P   | E-2
+                {   | F-2
+                +   | F#2
+                }   | G-2
+
+To access higher or lower notes than these, pressing F3 or F4 will lower and raise (respectively) the current Octave, lowering or raising the listed notes by that amount (e.g. what is listed as E-0 will become E-2 with an Octave of 2, while a G-2 would become a G-1 with an Octave of -1). In line with the SCSP's massive pitch range, both Octaves and note octave values can be negative; negative octaves are represented with lowercase note names.
+
+
+--THE INSTRUMENT EDITOR--
+
+This is the first screen you'll see once Calypso has finished loading, and likely the one you'll spend the most time in. Each of the 64 Instrument slots contain dozens of parameters, which will be listed below with their possible values and effects on the SCSP's sound. Some parameters directly correspond to a register on the SCSP, while others control values in the sound engine that indirectly impact sound registers; parameters in the latter category will be marked with a * to indicate that they are not 'true' SCSP features.
+
+Sample/Multi ID* (0x00 to 0x1F):
+ Selects the Sample or Multi-Sample that the Instrument will play. 32 preset Samples and 2 Multi-Samples are loaded into Calypso by default, but you can change which Samples are loaded before running the program (consult one of the other text files included here for more information) and freely edit and add Multi-Samples at your leisure. The 'Use Multi-Sample' parameter determines whether this parameter's value selects a Sample or Multi-Sample.
+
+Use Multi-Sample* (On/Off):
+ If on, the 'Sample/Multi ID' parameter selects a Multi-Sample for the Instrument instead of a Sample.
+
+Sample Offset* (0x00 to 0xFFFF):
+ Moves the start point of the sample (in addition to the 'Sample Start' value in the Sample Editor) forward by the given number of audio samples. Although the value can go as high as 0xFFFF, the sound driver prevents the actual sample start point from going higher than the end of the current Sample.
+
+Loop Start Offset* (0x00 to 0xFFFF):
+ Moves the loop start point of the sample (in addition to the identically-named 'Loop Start Offset' value in the Sample Editor) forward by the given number of audio samples. Although the value can go as high as 0xFFFF, the sound driver prevents the actual loop start point from going higher than the end of the current Sample.
+
+Loop End Offset* (0x00 to 0xFFFF):
+ Moves the loop end point of the sample (in addition to the identically-named 'Loop End Offset' value in the Sample Editor) backwards by the given number of audio samples. Although the value can go as high as 0xFFFF, the sound driver prevents the actual loop end point from going lower than the loop start point.
+
+Bit Reverse Sample (On/Off):
+ If on, the audio will play with its sample bits reversed. For most sample data, this produces a highly distorted version of the original sound, which can be useful for certain effects.
+
+Invert Sample (On/Off):
+ If on, the audio will be upside down. While this has no immediate differences from the original sample, playing a sample together with its inverted equivalent can be useful for stereo effects similar to those seen on the SNES.
+
+Noise Only (On/Off):
+ If on, the current audio channel will play pure, non-pitchable white noise instead of the sample. This noise is still affected, however, by most other Instrument parameters.
+
+Total Level (0 to 255):
+ This is effectively an inverted volume setting. When the value is 0, the Instrument will play at maximum volume; when the value is 255, the Instrument will be played as quietly as possible. Like most Yamaha sound chips, the actual difference in volume follows an exponential curve: increasing total level by 16 will half the previous amount of loudness, while decreasing the total level by 16 will double it instead. Importantly, this is the only volume setting taken into account when a channel is used as a modulator in a Patch. Unlike the YM2612, an overly-high total level value will never clip the waveform.
+
+Direct Volume (0 to 7):
+ Although the SCSP's channels are constantly generating audio, they can only output sound by sending that generated data to either one of the chip's effects slots or a 'direct audio' output that plays the data without any post-processing. This parameter controls how much to reduce the channel's volume before sending its audio to the direct output, with 7 performing no reduction and 0 sending no audio at all. Unlike the total level setting, the direct output is capable of clipping if too many high-volume channels are sent to it, so I recommend setting this parameter no higher than 5.
+
+Direct Pan (-15 to 15):
+ Determines the panning of the audio sent to the SCSP's direct audio output, with -15 panning the audio all the way to the left, 15 panning it all the way to the right, and 0 centering the audio. If 'Direct Volume' is 0, this parameter does nothing.
+
+Note Offset* (-96 to 95):
+ Causes the Instrument to play the given number of semitones above or below the played note.
+
+Cent Detune* (-100 to 99):
+ Detunes the Instrument by the given number of cents, such that the highest possible value offsets the pitch by about a semitone. Useful for microtonality or pitch slides, but isn't guaranteed to change the final value of the pitch register.
+
+Register Detune* (-0x4000 to 0x4000):
+ Directly raises or lowers the Channel's calculated pitch register value by the given value. Although that is inadequate for microtonality (as any FamiTracker user can attest to), the fact that it always detunes the Instrument makes it useful for creating phasing effects in a Patch.
+
+
+Hold Mode (On/Off):
+ If on, the attack phase of the Instrument's volume envelope will become a hold phase, where the Instrument stays at the maximum volume for a length of time given by the 'Attack/Hold' parameter.
+
+Attack (0 to 31, 0 disables):
+ Determines the speed of the attack phase of the Instrument's volume envelope. 31 is the fastest speed (instantly ramping up to the maximum volume) and 1 is the slowest speed, while 0 disables the attack phase (and thus the rest of the envelope - I don't recommend setting this). If the 'Hold Mode' parameter is on, the attack phase will stay at the maximum volume for the same amount of time it would've taken to reach that volume normally.
+
+Decay 1 (0 to 31, 0 disables):
+ Determines the speed of the first (pre-sustain) decay phase of the Instrument's volume envelope, where 31 is the fastest speed (instantly dropping to the sustain level after the attack phase finishes) and 1 is the slowest speed. As before, 0 turns off the first decay phase, so the envelope will remain at maximum volume after the attack phase finishes.
+
+Sustain (0 to 31, 0 disables):
+ Determines the volume level the first decay phase of the Instrument's volume envelope moves to. 0 disables the sustain level, causing the first decay phase to immediately end and move to the second decay phase, while 31 sets the sustain level to the lowest possible volume.
+
+Decay 2 (0 to 31, 0 disables):
+ Determines the speed of the second (post-sustain) decay phase of the Instrument's volume envelope, where 31 is the fastest speed (instantly dropping to the lowest possible volume once the first decay phase finishes) and 1 is the slowest speed. 0 once again turns this phase off, causing the envelope to remain at the sustain level until the envelope is released.
+
+Release (0 to 15, 0 disables):
+ Determines the speed of the release phase of the Instrument's volume envelope. 15 is the fastest release speed (an instant cut once the note is released), 1 is the slowest speed, and 0 prevents the note from being released at all (I don't recommend this).
+
+Key Scaling (0 to 14, 15 disables):
+ If not turned off, causes the Instrument's volume envelope to run faster as its pitch increases (note that this is based entirely off the value used by the SCSP's pitch register, not the note being played, and will vary from sample to sample). The higher the value is, the stronger the scaling effect will be.
+
+Loop Sync (On/Off):
+ When on, the attack phase of the Instrument's volume envelope will end once the current sample's loop start point is reached, even if the phase hasn't finished yet. This can prove useful with samples that decay into a short, quiet looping segment like the default piano samples: by setting a long 'Attack/Hold' time and enabling 'Hold Mode', the sample will only begin decaying once it reaches the looped section, leaving the main portion untouched.
+
+LFO Frequency (0 to 31):
+ The speed of the Instrument's LFO waveform, which can be used to control pitch (vibrato) and/or volume (tremolo); as such, an Instrument's pitch LFO and volume LFO will always be at the same speed. 31 is the fastest speed, while 0 will flatten (but not disable) the waveform entirely. 
+
+LFO Delay (0 to 255, 0 disables):
+ Sets how many ticks (sound driver updates - frames in this case) to wait after the Instrument begins a new note before starting the LFO. If set to 0, the LFO will not be reset on a new note at all (best observed using a slow, wide pitch LFO).
+
+Pitch LFO Strength (0 to 7):
+ Sets the depth of the vibrato produced from the Instrument's LFO frequency, with 7 being the maximum and 0 disabling pitch LFO entirely. The shape of the vibrato is determined by the 'Pitch LFO Waveform' parameter. 
+
+Pitch LFO Waveform (Saw, Square, Triangle, or Noise):
+ Sets the waveform used for the vibrato produced from the Instrument's LFO waveform, from one of 4 possible choices. Unlike the other options, the Noise waveform is unaffected by the LFO's frequency.
+
+Amp LFO Strength (0 to 7):
+ Sets the depth of the tremolo effect produced from the Instrument's LFO frequency, with 7 being the maximum and 0 disabling amplitude LFO entirely. The shape of the tremolo is determined by the 'Amp LFO Waveform' parameter. 
+
+Amp LFO Waveform (Saw, Square, Triangle, or Noise):
+ Sets the waveform used for the tremolo effect produced from the Instrument's LFO waveform, from one of 4 possible choices. Unlike the other options, the Noise waveform is unaffected by the LFO's frequency.
+
+
+Patch Length* (0 to 7, 0 disables):
+ If set to a non-zero value, will turn the current Instrument into a Patch. Playing a note with a Patch will play not just the current Instrument, but also the given number of Instruments directly following it (if Instrument 05 has a Patch Length of 3, playing Instrument 05 will also play Instruments 06, 07 and 08 as well). The 'MAKING FM INSTRUMENTS' section later in this document has more information on using this parameter in practice.
+
+Ignore Velocity* (On/Off):
+ If On, the Instrument will be unaffected by its Channel's 'Velocity' parameter, and will always play at its given 'Total Level' value. This feature is primarily intended for creating FM Patches; the 'MAKING FM INSTRUMENTS' section later in this document will cover this in more detail.
+
+Modulation Level (0 to 7):
+ Determines how much the Instrument should be frequency modulated by its modulation inputs. 0 represents a complete lack of modulation and 7 represents the highest level of modulation, although I've found that only values above 4 produce any noticeable difference in sound. To read more on this parameter, go to the 'MAKING FM INSTRUMENTS' section later in this document.
+
+Modulation Input X (-16 to 15):
+Modulation Input Y (-16 to 15):
+ Selects one of the two sound channels to use for the Instrument's frequency modulation inputs, relative to the current sound channel; an Instrument with an input value of -3 will draw from the channel 3 spaces to its left, wrapping around if need be (an input value of 0 will cause the Instrument to read its own data). This is a key element of designing FM Instruments on the Sega Saturn, and will be covered more carefully in the 'MAKING FM INSTRUMENTS' section later in this document.
+
+X Data Generation (Old/New):
+Y Data Generation (Old/New):
+ Selects whether to use the most recent batch of generated sound data as frequency modulation data (if set to 'New') or the second most recent (if set to 'Old'). The 'MAKING FM INSTRUMENTS' section later in this document will elucidate how to properly use this parameter.
+
+Pitch Multiplier* (1 to 256):
+ Multiplies the pitch of the Instrument by the given value (for example, with a value of 3, an Instrument that would normally play at 200 hertz would instead play at 600 hertz). Mostly intended for FM patches, although just intonation fans may also find some uses for it.
+
+Pitch Divider* (1 to 256):
+ Divides the pitch of the Instrument by the given value (for example, with a value of 4, an Instrument that would normally play at 200 hertz would instead play at 50 hertz). Mostly intended for FM patches, although just intonation fans may also find some uses for it.
+
+Level Scaling* (0 to 15, 0 disables):
+ Mimics the level scaling feature found on OPL-series FM chips, where higher pitches will have higher total level values and, therefore, play at lower volumes. The parameter's value determines the strength of the volume attenuation, with 15 providing the strongest reduction in volume and 0 disabling scaling entirely. Like key scaling, the amount of level scaling done to the Instrument is dependent on the final, raw pitch register value, not the note being played.
+
+Effect Volume (0 to 7):
+ Sets the volume of the portion of the Instrument that passes through the SCSP's effects module (DSP). This setting only takes effect if the 'Input Level' parameter is set to a non-zero value, as the module will not have any audio data to output otherwise. Unlike 'Direct Volume', this parameter is in no danger of clipping, although effect-processed audio can still distort if the inputs are too loud.
+
+Effect Pan (-15 to 15):
+ Controls the panning of the Instrument's effects output, with the same controls as its Direct Volume equivalent.
+
+Effect Slot (0 to 15):
+ Determines which of the 16 DSP input slots the Instrument's sound data should be sent to, which decides how the DSP program will operate on it.
+
+Input Level (0 to 7):
+ Sets the volume of the audio data sent by the Instrument to the DSP, with 7 being the maximum volume and 0 preventing the audio from going through the effects module entirely. Overly-high values can distort the audio, albeit in a different way than traditional 'brick wall' clipping.
+
+(Important note for effect parameters: Due to the inherent complexity of the feature and the inherent simplicity of the program, Calypso's DSP support is intentionally quite barebones, with the DSP program consisting of a simple volume change on input slot 0. The effects parameters are included for completeness's sake, rather than musical effect; that being said, expect a similar, DSP-focused program sometime in the future.)
+
+
+Macro ID (0 to 63, can also be disabled entirely):
+ Choose a Macro to be used by the Instrument, which can include up to 8 macros at once. Macros will be covered further in the 'MACRO EDITOR' section later in this document.
+
+
+--THE SAMPLE EDITOR--
+
+ You can access the Sample Editor by moving one layer up from the Instrument Editor (TAB + Up on a keyboard, Y on a controller). Each slot in the editor allows you to edit the basic properties of one of the 32 samples loaded in when Calypso begins; since these parameters are applied to the Sample directly, they will affect all Instruments that use the sample.
+
+Loop Type (None, Forward, Reverse, Alternating):
+ This sets the behavior of the Sample when it reaches the end of its loop area. None ends playback at this point, Forward returns to the start of the loop area, Reverse works similarly to Forward but with reversed playback during the looped section, and Alternating reverses playback when the end of the loop area is reached and returns to forward playback when the start of the loop area has been reached again (often called a 'ping-pong loop' in many audio programs). 
+
+ (Note: The SCSP (or, at least, how Mednafen implements the SCSP) is afflicted with a pernicious bug that appears most often when using alternating and reverse loops. If the SCSP is asked to play a sample with a sufficiently small loop area (from a combination of the natural size of the loop area and the 'squeezing' of the loop area's size that comes with playing the sample at higher pitches), the playback cursor will 'skip' over the loop point, typically playing a large chunk of audio data beyond the intended end of the sample. As far as I'm aware, this problem cannot truly be prevented, but you can avoid the bug by avoiding alternating and reverse loops when using short looped samples at higher pitches.)
+
+Sample Start (0 to the end of the sample):
+ Affects how far into the audio data the SCSP should start playing the Sample, in audio samples after the start of the data (0 will, as you might suspect, play the audio data from the very beginning). The value of this parameter cannot exceed the total size of the audio data itself, and the actual sample start point may be further altered if the Sample is being played by an Instrument with a unique 'Sample Start Offset' value.
+
+Loop Start Offset (depends on the sample length and 'Sample Start' value):
+ Determines the beginning of the Sample's loop area, in audio samples after the 'Sample Start' point of the Sample; for instance, if Sample Start is set to 24 audio samples, then the actual location of the loop start point within the audio data will be 24 plus the Loop Start Offset's value. This value cannot put the loop start point outside the audio data, so its upper limit depends on 'Sample Start' parameter's value, and the actual loop start point may be further altered if the Sample is being played by an Instrument with a unique 'Loop Start Offset' value.
+
+Loop End Offset (depends on the sample length and 'Loop Start Offset' value):
+ Determines the end of the Sample's loop area, in audio samples after the 'Sample Start' point of the Sample; for instance, if Sample Start is set to 24 audio samples, then the actual location of the loop end point within the audio data will be 24 plus the Loop End Offset's value. This value cannot put the loop start point outside the audio data, so its upper limit depends on 'Sample Start' parameter's value; additionally, it can never fall below the 'Loop Start Offset' value's parameter to prevent broken loop areas. The actual loop end point may be further altered if the Sample is being played by an Instrument with a unique 'Loop End Offset' value.
+
+Base Pitch (-8:000 to 7:3FF):
+ Sets the pitch that the Sample will play at when at its 'Base Note', allowing you to fine tune any samples that are slightly off from your desired tuning. This value, following the SCSP's pitch system, is formatted as two separate values - an 'Octave' value ranging from -8 to 7, and a 'Fine Pitch' value ranging from 0x000 to 0x3FF. Unlike some other Yamaha FM chips, there is no overlap between the pitch ranges encompassed by each Octave setting, so each possible pitch value is a unique playback frequency. 
+
+Base Note (c-8 to B-7):
+ Sets the note at which the Sample will play its audio data at the 'Base Pitch' frequency value, allowing you to move your samples into concert pitch. Somewhere counterintuitively, raising this value lowers the pitch at which the Sample is played, and vice versa.
+
+
+Below is a list of the samples included with Calypso by default, and some of their intended uses. Check the 'HOW TO CHANGE THE SAMPLES' text file for information on replacing these with your own audio.
+
+0x00: "SINE128.RAW"  - A basic sine wave; ideal for testing and FM
+0x01: "HSINE128.RAW" - A half sine wave from the OPL2 chip; ideal for FM
+0x02: "ASINE128.RAW" - An absolute sine wave from the OPL2 chip; ideal for FM
+0x03: "QSINE128.RAW" - A quarter sine wave from the OPL2 chip; ideal for FM
+0x04: "SSINE128.RAW" - A squished sine wave from the OPL3 chip; ideal for FM
+0x05: "SASIN128.RAW" - A squished absolute sine wave from the OPL3 chip; ideal for FM
+0x06: "PULSE128.RAW" - A pulse wave from the OPL3 chip; ideal for FM
+0x07: "DSINE128.RAW" - A derive sine wave from the OPL3 chip similar to a sawtooth wave; ideal for FM
+0x08: "PULSE512.RAW" - A pulse wave; change the 'Sample Start' parameter for different duty cycles
+0x09: "2A03T512.RAW" - A sampled triangle wave from the NES's 2A03 chip
+0x0A: "2A03NOIS.RAW" - A sampled white noise cycle from the NES's 2A03 chip
+0x0B: "2A03PNOI.RAW" - A sampled periodic noise cycle from the NES's 2A03 chip
+0x0C: "PIANOLOW.RAW" - A low piano sample
+0x0D: "PIANOMID.RAW" - A mid-range piano sample
+0x0E: "PIANOHGH.RAW" - A high piano sample
+0x0F: "LESORGAN.RAW" - A Leslie speaker-modulated organ sample
+0x10: "ACOUSTIC.RAW" - An acoustic guitar sample
+0x11: "DISTORTO.RAW" - A distorted guitar sample
+0x12: "FINGBASS.RAW" - An electric bass sample
+0x13: "ORCHIT2.RAW"  - An orchestra hit sample
+0x14: "CELLO.RAW"    - A simple cello sample
+0x15: "TRUMPET.RAW"  - A trumpet sample
+0x16: "SAXYBOY.RAW"  - A tenor saxophone sample
+0x17: "CHOIR.RAW"    - A choir sample
+0x18: "DEFKICK.RAW"  - A kick drum sample
+0x19: "DEFSNARE.RAW" - A snare drum sample
+0x1A: "DEFCHAT.RAW"  - A closed hi-hat cymbal sample
+0x1B: "DEFOHAT.RAW"  - An open hi-hat cymbal sample
+0x1C: "DEFTOM.RAW"   - A tom-tom drum sample; can be repitched to suggest different drums
+0x1D: "DEFCRASH.RAW" - A crash cymbal sample
+0x1E: "YES.RAW"      - An intriguing sound effect
+0x1F: "BOOML.RAW"    - An intriguing sound effect
+
+
+--THE MULTI-SAMPLE EDITOR--
+
+The Multi-Sample Editor, accessed by moving one layer up from the Sample Editor (using Tab + Up on the keyboard and Y on the controller), allows you to create Multi-Samples, structures that map notes to Samples. An Instrument can choose to use a Multi-Sample in lieu of a Sample, allowing a single Instrument to play multiple different Samples depending on the note being played (note that this is entirely dependent on the Instrument's Channel's 'Note' parameter; a 'Note Offset' paramater on the Instrument will not affect the Sample selection process).
+
+Each Multi-Sample can be one of two different types: Sample Maps and Sample Splits, determined by the value of its 'Type'. Sample Maps offer a simple one-to-one mapping between note and Sample, making them ideal for creating drum kits and other cases where a single Instrument might need to represent several disparate Samples, while Sample Splits assign each Sample to a continuous range of notes, making them ideal for represent sounds that need to change their timbre at higher or lower ranges. For simplicity's sake, both types of Multi-Samples begin their mappings at C-0, so there is no way to define different Sample behavior at negative octaves for those types.
+
+Type (Map, Split):
+ Sets the mapping format of the Multi-Sample, which also affects which mapping parameters will be available to edit.
+
+Base Note Override (On/Off):
+ If on, causes all Samples in the Multi-Sample to be played as if their note was their 'Base Note' parameter, regardless of the actual note. This is useful for creating collections of drums or sound effects, although it prevents you from reusing multiple Samples at different pitches. Note that this only affects the initial note value of the Instrument, and note offset and detuning parameters can still affect the pitch of the Multi-Sample.
+
+Length (1 to 63 if a Sample Map, 1 to 32 if a Sample Split):
+ If the Multi-Sample is a Sample Map, this determines how many notes the Multi-Sample should assign to Samples. If the Multi-Sample is a Sample Split, however, it determines how many Samples the Multi-Sample should assign note ranges to.
+
+Sample ID (0x00 to 0x1F):
+ In a Sample Map, this is the Sample that will be played on the displayed note; in a Sample Split, this determines the Sample that will play beyond the previous 'Note Cutoff' value (the first Sample's cutoff is C-0).
+
+Note Cutoff (C-0 to B-7, exclusive to Sample Splits):
+ Sets the note at which the Sample below it will begin playing instead of the previous Sample.
+
+
+By default, Calypso automatically creates two Multi-Samples to demonstrate their basic function. Multi-Sample 0x00 is a Sample Map made from the 6 percussion Samples included in the default bank, while Multi-Sample 0x01 is a Sample Split made from the bank's 3 piano samples. Replacing the samples may break these Multi-Samples, so consult the 'HOW TO CHANGE THE SAMPLES' document for information on disabling this behavior.
+
+
+--THE MACRO EDITOR--
+
+You can see and work with the Macro Editor by moving one layer down from the Instrument Editor (Tab + Down on a keyboard, Z on a controller). Macros are sequences of parameter values that Instruments can include with the rest of their data; when an Instrument with a Macro plays, the Instrument's parameters will be updated with a value from the Macro each frame, allowing for parameter automation effects that wouldn't be possible with a static list of values. Because they are a separate set of data, multiple Instruments can share the same Macros.
+
+Each Macro can be set to contain either Absolute values (which set their parameter directly) and Relative values (which offset the parameter by the given amount instead). Additionally, the flow of a Macro can be affected by an optional release point that prevents the Macro from moving beyond it until the note is released, as well as two optional loop points, one for before the release point and one for after it.
+
+The property a Macro affects is determined by its 'Type' parameter, which can be one of the following values (values marked with a * cannot be Relative; furthermore, Relative Macros will always have a range of -0x8000 to 0x7FFF regardless of the range their Type normally has, although the actual value sent to the parameter will still be clamped to the given range):
+
+'KEY' - Key On/Off* (None, Off, On, Reset):
+ Controls the key state of the Instrument, with 'Off' sending a key off event, 'On' sending a key on event, 'Reset' sending a rapid key off and on to reset the Instrument's volume envelope, and 'None' maintaining the current key state. Despite controlling the 'release' portion of the Instrument's volume envelope, key off events triggered by this Macro will not activate the Release phase of the Instrument's Macros. This Macro type has the potential to create Instruments that do not properly release themselves; switch editors or open the help menu to cut the sound if this occurs.
+
+'SOFF' - Sample Offset (0x0000 to 0xFFFF):
+ Affects the Instrument's 'Sample Offset' parameter, and functions identically to it.
+
+'LSTR' - Loop Start Offset (0x0000 to 0xFFFF):
+ Affects the Instrument's 'Loop Start Offset' parameter, and functions identically to it.
+
+'LEND' - Loop End Offset (0x0000 to 0xFFFF):
+ Affects the Instrument's 'Loop End Offset' parameter, and functions identically to it.
+
+'TRTS' - Sample Traits* (0 (None) to 7 (Bit Reverse + Invert + Noise)):
+ Affects the Instrument's 'Bit Reverse Sample', 'Invert Sample' and 'Noise Only' parameters. Each parameter is represented by a single bit in a 3-bit value; from 0, add 1 to turn on bit reversal, add 2 to turn on inversion, and add 4 to turn on noise only mode.
+
+'TLVL' - Total Level (0 to 255):
+ Affects the Instrument's 'Total Level' parameter, and functions identically to it.
+
+'DVOL' - Direct Volume (0 to 7):
+ Affects the Instrument's 'Direct Volume' parameter, and functions identically to it.
+
+'DPAN' - Direct Pan (-15 to 15):
+ Affects the Instrument's 'Direct Pan' parameter, and functions identically to it.
+
+'NOFF' - Note Offset (c-8 to B-7):
+ Affects the Instrument's 'Note Offset' parameter, and functions identically to it, besides some special behavior when the 'Fixed Values' parameter is turned on (more on that later in this section). Unlike most other Macro types, values from this Macro are added to the Instrument's 'Note Offset' parameter instead of overriding it.
+
+'CDET' - Cent Detune (-100 to 99):
+ Affects the Instrument's 'Cent Detune' parameter, and functions identically to it. Similarly to 'Note Offset', values from this Macro are added to the Instrument's 'Cent Detune' parameter instead of overriding it.
+
+'RDET' - Register Detune (-0x4000 to 0x4000):
+ Affects the Instrument's 'Register Detune' parameter, and functions identically to it. Much like the other detune type, values from this Macro are added to the Instrument's 'Register Detune' parameter instead of overriding it.
+
+'ETRT' - Envelope Traits* (0 (None) to 3 (Hold Mode + Loop Sync)):
+ Affects the Instrument's 'Hold', 'Invert Sample' and 'Loop Sync' parameters. Each parameter is represented by a single bit in a 3-bit value; from 0, add 1 to turn on hold mode, and add 2 to turn on loop syncing.
+
+'ATTK' - Attack/Hold (0 to 31):
+ Affects the Instrument's 'Attack/Hold' parameter, and functions identically to it.
+
+'DEC1' - Decay 1 (0 to 31):
+ Affects the Instrument's 'Decay 1' parameter, and functions identically to it.
+
+'SUST' - Sustain (0 to 31):
+ Affects the Instrument's 'Sustain' parameter, and functions identically to it.
+
+'DEC2' - Decay 2 (0 to 31):
+ Affects the Instrument's 'Decay 2' parameter, and functions identically to it.
+
+'RLSE' - Release (0 to 15):
+ Affects the Instrument's 'Release' parameter, and functions identically to it.
+
+'KSCL' - Key Scaling (0 to 15):
+ Affects the Instrument's 'Key Scaling' parameter, and functions identically to it.
+
+'LFOF' - LFO Frequency (0 to 31):
+ Affects the Instrument's 'LFO Frequency' parameter, and functions identically to it.
+
+'LFOR' - LFO Reset* (Off/On):
+ Turns the LFO reset bit of the SCSP channel on or off, overriding the reset behavior from the Instrument's 'LFO Delay' parameter.
+
+'PLST' - Pitch LFO Strength (0 to 7):
+ Affects the Instrument's 'Pitch LFO Strength' parameter, and functions identically to it.
+
+'PLWV' - Pitch LFO Waveform* (Saw, Square, Triangle, Noise):
+ Affects the Instrument's 'Pitch LFO Waveform' parameter, and functions identically to it.
+
+'ALST' - Amp LFO Strength (0 to 7):
+ Affects the Instrument's 'Amp LFO Strength' parameter, and functions identically to it.
+
+'ALWV' - Amp LFO Waveform* (Saw, Square, Triangle, Noise):
+ Affects the Instrument's 'Amp LFO Waveform' parameter, and functions identically to it.
+
+'MLVL' - Modulation Level (0 to 7):
+ Affects the Instrument's 'Modulation Level' parameter, and functions identically to it.
+
+'MODX' - Modulation Input X (-16O to 15O, then -16N to 15N):
+ Affects the Instrument's 'Modulation Input X' and 'X Data Generation' parameters, with the numerical part of the value setting the former value and the letter indicating the latter's ('O' for 'Old', 'N' for 'New').
+
+'MODY' - Modulation Input Y (-16O to 15O, then -16N to 15N):
+ Affects the Instrument's 'Modulation Input Y' and 'Y Data Generation' parameters, with the numerical part of the value setting the former value and the letter indicating the latter's ('O' for 'Old', 'N' for 'New').
+
+'PMUL' - Pitch Multiplier (1 to 256):
+ Affects the Instrument's 'Pitch Multiplier' parameter, and functions identically to it.
+
+'PMUL' - Pitch Divider (1 to 256):
+ Affects the Instrument's 'Pitch Divider' parameter, and functions identically to it.
+
+'LSCL' - Level Scaling (0 to 15):
+ Affects the Instrument's 'Level Scaling' parameter, and functions identically to it.
+
+'EVOL' - Effect Volume (0 to 7):
+ Affects the Instrument's 'Effect Volume' parameter, and functions identically to it.
+
+'EPAN' - Effect Pan (-15 to 15):
+ Affects the Instrument's 'Effect Pan' parameter, and functions identically to it.
+
+'ESLT' - Effect Slot* (0 to 15):
+ Affects the Instrument's 'Effect Slot' parameter, and functions identically to it.
+
+'ILVL' - Input Level (0 to 7):
+ Affects the Instrument's 'Input Level' parameter, and functions identically to it.
+
+'EC01' to 'EC63' - Effect Coefficient 01 through 63 (-4096 to 4096):
+ Affects the given DSP coefficient (of which there is currently only one in use). Unlike the other Macro types, DSP coefficients are shared by all Channels, so care must be taken to avoid conflicts between Macros that modify the same coefficient.
+
+'EA00' to 'EC31' - Effect Address 00 through 31 (0x0000 to 0xFFFF):
+ Affects the given DSP address (of which there are currently none in use). Unlike the other Macro types, DSP addresses are shared by all Channels, so care must be taken to avoid conflicts between Macros that modify the same address.
+
+(Side note: the effect coefficient IDs begin at 01 instead of 00 because Sega's DSP code guidelines require that the first coefficient has a value of 0 at all times, a restriction not applied to any addresses.)
+
+
+Below are the parameters for a given Macro:
+
+Type (All Macro types listed above):
+ Selects the parameter(s) the Macro should operate on.
+
+Value Length (Single/Variable):
+ If 'Single', each value in the Macro will run for a single frame; if 'Variable', each value will run for a set number of frames determined by that value's 'Data Length' parameter (in a Relative Macro, this will apply the value's offset multiple times in succession).
+
+Mode (Absolute/Relative, just Absolute for some types):
+ Sets whether the Macro should be a sequence of definite values (Absolute) or a set of offsets to the parameter (Relative).
+
+Fixed Values (Off/On):
+ If on, the Macro takes on a small number of additional properties:
+  -If the Macro's type is 'Note Offset', the Macro's values will represent absolute notes instead of offsets to the current note (e.g. if the Macro, in Absolute mode, has a value of 0, the Instrument will always play a C-0 there, regardless of the actual note being played).
+  -If the Macro is Relative, the Macro will always use 0 as the base parameter value instead of using a value from the Instrument's parameters.
+  -Once the Macro ends (by reaching the end of its sequence without a loop point to return to), it returns control to the Instrument's parameter and, if the Macro's type is 'Note Offset', starts playing the Instrument's given note.
+
+Release Behavior (Play/Jump):
+ If set to 'Jump', the Macro will instantly move to after the Release point once the note is released; otherwise, the Macro will simply let the Macro continue playing the pre-Release section until it reaches the Release point.
+
+Continuous (Off/On):
+ If on, the Macro will not reset playback when a new note begins (you can reset the Macro manually by switching layers, opening the help menu, or changing the current Instrument).
+
+Progressive (Off/On):
+ If this parameter is on and the Macro is Relative, resetting the Macro's playback will not reset its currently-stored value; that is, the Relative Macro will 'pick up' from the last value it was offsetting instead of beginning anew from the Instrument's parameter.
+
+Allow Overflow (Off/On):
+ If this parameter is on and the Macro is Relative, offsetting the Macro's current value beyond its type's bounds will cause it to wrap around instead of begin clamped.
+
+Propagate Patches (Off/On):
+ If the Instrument using this Macro is a Patch Leader and this parameter is on, the other Instruments in the Patch will be use the Macro as well (this Macro is used instead of whatever Macro was in that Instrument's slot, so this does not allow you to 'cheat' the 8 Macro per Instrument limit).
+
+Macro Length (0 to 250):
+ Determines how many values will be in the Macro.
+
+Loop 1 Point (0 to 250, 0 disables):
+Loop 2 Point (0 to 250, 0 disables):
+ Sets the positions of the Macro's two loop points. Once the Macro reaches the end of a section (either by hitting the release point or the end of the macro), it will jump back to the nearest accessible loop point and continue playing from there. 
+
+Release Point (0 to 250, 0 disables):
+ Sets the position of the Macro's release point, which the Macro cannot progress past until the Instrument playing it is released.
+
+Data Value/Offset (Varies based on 'Type' and 'Mode'):
+ The individual values for the Macro sequence. If the 'Value Length' parameter is set to 'Single', each data point represents a single frame of time; otherwise, the number of frames each value is active for depends on the 'Data Length' parameter below it.
+
+Data Length (0x0000 to 0xFFFF, only appears if 'Value Length' is set to 'Single'):
+ Determines how many frames the 'Data Value/Offset' parameter above it should be run for. The default value of '0' is equivalent to a value of '1'.
+
+
+--THE CHANNEL EDITOR--
+
+The Channel Editor lives one layer down (Tab + Down on a keyboard and Z on a controller) from the Macro Editor. At the moment, it is of the most use to controller users, where it is the only way to change the current note, but all control schemes can lower and raise the playback volume.
+
+Note (c-8 to B-7):
+ If using a controller, this changes the current note being played; otherwise, it doesn nothing.
+
+Velocity (0 to 255):
+ Controls the volume of the Channels, such that a value of 0 silences them and a value of 255 plays them at full volume (although they are still limited to the maximum volume of the currently playing Instruments).
+
+Channel Volume (0 to 255):
+ Currently identical to 'Velocity' in function.
+
+
+--MAKING FM INSTRUMENTS--
+
+For every Yamaha FM chip not named the SCSP, FM channels and their interactions operated under a strict hegemonic system. Under this regime of FM feudalism, operators - the parts of the chip responsible for generating waveforms and, ultimately, audio - are not permitted to dictate their own pitch, FM routing, or even vibrato, as these tasks are instead left to the nebulous overseers known as 'channels', who decree what pitch the operators under their thumb should play at, how they should modulate each other, and other essential aspects of their sound. When tools emerged, from both professional software developers and hobbyist programmers alike, to write music for these chips, these hierarchies informed their designs, leaving most FM chip sequencers saddled with a fundamental blindness to the very idea of operator independence. When FM chips do attempt to grant their operators a semblance of autonomy, their programs' implementations consistently flounder - working with Deflemask in the YM2612's 'CH3 Mode', which yields complete pitch freedom to the third channel's operators, is often a nightmare, and Furnace, to this very day, still has no way to key YM2612 operators on and off separately from each other (and the less said about the OPL3 and above, the better).
+
+FM users have put up with these design oversights because they are, for the vast majority of users, inconsequential. FM programs and their users think in discrete 'patches': a neat group of operators with a single, unambiguous timbre to be stored, retrieved, and shared with others at the user's leisure. The kind of composer adventurous enough to explore CH3 Mode is also diligent enough to push back against Deflemask's inexorable jank when it rears its ugly head, and the number of Furnace users familiar with the operator key independence to recognize and argue for its potential could fill, at best, a modest truck. Patch Brain, for all its faults, covers every need of the average FM musician (and only nearly every need of the seasoned FM veteran); things have persisted the way they are because that way is useful, understandable, and  accurate 'enough' to what's going on under the hood.
+
+The SCSP throws all of these notions out the window. We cannot approach the SCSP in terms of distinct 'channels' and 'operators', because that dichotomy simply does not exist here. At any given moment, the discrete sonic units of the SCSP - what Sega's manual calls 'slots' - can:
+ -Determine their own pitch, volume, and ADSR envelopes
+ -Be keyed on and off
+ -Be modulated by the stored audio of up to two other slots (including itself)
+ -Send their audio to the speakers
+ -Send their audio to one of the 16 effects module inputs
+ -Act as an input for an effects module's calculations
+ -Perform all of these roles at once
+Although the SCSP is frequently described as a 32-channel sample chip that can 'become a 16-channel, 2-operator FM chip' (or an '8-channel, 4-op FM chip', or a '16-channel, 8-op FM chip', and so on), this Patch Brained approach falls apart upon taking a look at the reality of the chip. What we have here is FM Free Love, where any number of 'operators' can modulate any number of other 'operators' in any order they please, without ever needing the guiding hand of an FM algorithm from a 'channel'; the 'algorithm' and the titles of 'carrier' and 'modulator' emerge organically from the interaction of each slot's own modulation inputs, and can surpass the complexity of the likes of the YM2612's routing schemes with ease.
+
+I'm producing all this verbiage, of course, to provide some grounding why Calypso's 'Patches' do not follow the rules people have come to expect from an FM instrument editor. While I have made some concessions to orthodoxy - being able to maintain the frequency ratios and relative volumes of all involved waveforms is an unambiguous good -, trying to paste algorithms over the SCSP is a waste of its musical potential. While I don't expect much commitment on the user's part to learn a simple 'toy' program, I encourage you to approach the guide below with an open mind to best explore the capabilities of the software.
+
+
+--ACTUALLY MAKING FM INSTRUMENTS--
+
+The key to creating FM in Calypso is the 'Patch Length' parameter in the Instrument Editor. When this parameter is set to something other than 0, it will recruit that many additional Instruments after the current one to be keyed on and off with it; as an example, if Instrument 06 has a 'Patch Length' of 3 and plays in channel 1, then Instrument 07 will play in channel 2, Instrument 08 will play in channel 3, and Instrument 09 will play in channel 4 simultaneously, and the reverse will happen once Instrument 06 stops playing. Moreover, each of these Instruments will borrow their note value from the 'patch leader', and will inherit any Macro's with the 'Propagate Patches' parameter in it. This is the closest the SCSP can get to an 'FM patch' while still respecting the hardware's features, and will be called a 'Patch' (note the capital P) to distinguish it from the """authentic""" patches of its peers.
+
+The next step to shaping your Patch is to decide which of your Instruments will act as 'modulators' (Instruments that modulate other Instruments and aren't audible beyond that), which will act as 'carriers' (Instruments that are modulated by the modulators, output their audio from the SCSP, and don't modulate anything else). This is a false division on the SCSP, as there's nothing stopping an Instrument from modulating and being heard at the same time, but it's a useful one for the purposes of this guide.
+
+To prevent an Instrument from being heard, simply set its 'Direct Volume' and 'Effect Volume' parameters to 0; from here on out, the strength of the modulation will be determined entirely by the Instrument's 'Total Level' value and volume envelope, along with the volume of the Sample itself. To prevent the modulation strength from changing with the volume of the rest of the Patch, enable the 'Ignore Velocity' option in the Instrument Editor as well.
+
+Modulation is handled by a number of parameters in the Instrument Editor. 'Modulation Level' controls the coarse strength of the modulation, and should generally be set to a value of at least 5 to take effect. Each Instrument can accept up to two different channels as modulation inputs, with 'Modulation Input X' and 'Modulation Input Y' determining which of those channels to use relative to the channel's base position (The 'X Data Generation' and 'Y Data Generation' parameters also affect the over tone of these inputs, but the distinction between the two is usually fairly small). Because of how Calypso handles Patches, you can calculate which values to use here by subtracting the Instrument number of your 'modulators' from the number of your 'carriers', then assigning that number to one of the input parameters (if Instrument 07 is a 'modulator' and Instrument 09 is a 'carrier', then Instrument 09 needs to set one of its inputs to 7 - 9: -2). An input value of 0 causes the channel to modulate itself, producing a similar 'feedback' effect found in most FM chips; unlike those chips, however, any 'operator' can perform feedback, and feedback can also be combined with another input for a more complex sound.
+
+A number of relatively minor Instrument parameters also take on significantly more importance when designing Patches:
+ -'Pitch Multiplier' and 'Pitch Divider' mimic both the multiplier settings of FM chips and the floating point-based frequency ratios of FM synthesizers like the Yamaha DX7.
+ -'Cent Detune' and 'Register Detune' work similarly to the detune settings of most FM chips, with the former being better at larger detunes and the latter being more suited to small pitch adjustments that can fail at certain frequencies. For even stronger detunes, the 'Note Offset' parameter may prove useful.
+(Important note: none of these settings correspond to real settings on the SCSP - Calypso's sound driver simply takes these values and uses them to calculate a pitch value for the SCSP based on them. As such, perfect ratios between frequencies are not always possible, particularly if the Samples used have different sizes.)
+ -'Key Scaling' and 'Level Scaling' can approximate the sounds of 'realistic' instruments by speeding the volume envelope up with pitch and decreasing volume with pitch, respectively.
+ -'Key' Macros can be used to create looping volume envelopes, for a similar (but not nearly as versatile) effect to the YM2612's SSG-EG feature.
+
+If Calypso detects that an Instrument is part of a Patch, it will play that Patch when the Instrument is played, even if it is not the patch leader - hold Shift (keyboard) or X (controller) when playing the Instrument to only hear that Instrument.
