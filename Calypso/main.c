@@ -2074,7 +2074,7 @@ void			my_draw(void)
 				jo_clear_screen_line(text_offset);
 			}
 		}
-
+		jo_clear_screen_line(24);
 		jo_clear_screen_line(25);
 		jo_clear_screen_line(26);
 		if (current_page < getNumPages(editor)) {
