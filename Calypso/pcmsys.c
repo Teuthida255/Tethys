@@ -125,7 +125,7 @@ static short adx_coef_tbl[8][2] =
 	{ADX_1920_COEF_1, ADX_1920_COEF_2}
 };
 
-static float semitone_mults[13] = {
+static const float semitone_mults[13] = {
 	1.0,
 	1.059463094,
 	1.122462048,
@@ -141,7 +141,7 @@ static float semitone_mults[13] = {
 	2.0
 };
 
-static float cent_mults[101] = {
+static const float cent_mults[101] = {
 	1.0,
 	1.00057779,
 	1.001155913,
@@ -1030,21 +1030,24 @@ void	chn_set_final_pitch(short chnNumber, short note, short note_offset, short c
 		octave -= OCTAVE_SIZE;
 
 	pitch += MAX_PITCH_SIZE;
+
+	if (cent > 0) {
+		pitch *= cent_mults[cent];
+	}
+	else if (cent < 0) {
+		semitone--;
+		pitch *= cent_mults[100 - (-cent)];
+	}
+
 	if (semitone != 0) {
 		octave += semitone / 12;
 		if (semitone > 0) {
 			pitch *= semitone_mults[semitone % SEMITONES_PER_OCT];
 		}
 		else if (semitone < 0) {
-			pitch /= semitone_mults[((-semitone) % SEMITONES_PER_OCT)];
+			octave--;
+			pitch *= semitone_mults[SEMITONES_PER_OCT - ((-semitone) % SEMITONES_PER_OCT)];
 		}
-	}
-
-	if (cent > 0) {
-		pitch *= cent_mults[cent];
-	}
-	else if (cent < 0) {
-		pitch /= cent_mults[-cent];
 	}
 
 	if (freq_mul != freq_div) {		
