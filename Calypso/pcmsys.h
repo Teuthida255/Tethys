@@ -4,6 +4,9 @@
 #ifndef __PCMSYS_H__
 # define __PCMSYS_H__
 
+#include <jo/jo.h>
+
+
 ///////////////
 // Likely duplicates from other libraries (in this case, taken from iapetus)
 //////////////////////////////////////////////////////////////////////////////
@@ -60,7 +63,7 @@
 #define MLT_CTRL_LENGTH_MAX (63)
 #define MCR_CTRL_MAX (0x7F)
 #define MCR_CTRL_LENGTH_MAX (250)
-#define INS_MACROS_MAX (8)
+#define INS_MACROS_MAX (4)
 //////////////////////////////////////////////////////////////////////////////
 #define CHN_INHERIT_MIN (0x401) // Bounds for the 'inherit' instrument
 #define CHN_INHERIT_MAX (0x407) // that borrows values from adjacent channels for FM patches
@@ -425,8 +428,7 @@ extern const unsigned short macroBounds[NUM_MACRO_TYPES][2];
 short			convert_bitrate_to_pitchword(short sampleRate);
 int				convert_pitchword_to_bitrate(short pitchWord);
 unsigned short	calculate_bytes_per_blank(int sampleRate, Bool is8Bit, Bool isPAL);
-unsigned short	calculate_bytes_per_blank_with_pitchword(short insNumber);
-unsigned short	calculate_bytes_per_blank_with_final_pitch(short chnNumber);
+unsigned short	calculate_bytes_per_blank_with_pitchword(short pitchword, unsigned char bitDepth);
 short 			lcm(short a, short b);
 void			cd_init(void);
 
@@ -529,21 +531,50 @@ void	mcr_loop2_change(short mcrNumber, unsigned char point);
 void	mcr_release_change(short mcrNumber, unsigned char point);
 void	mcr_set_data(short mcrNumber, short index, unsigned short data);
 
-unsigned char	mcr_get_type(short mcrNumber);
-unsigned char	mcr_get_length(short mcrNumber);
-Bool			mcr_is_variable_length(short mcrNumber);
-Bool			mcr_is_relative(short mcrNumber);
-Bool			mcr_is_fixed(short mcrNumber);
-Bool			mcr_does_jump_on_release(short mcrNumber);
-Bool			mcr_does_overflow(short mcrNumber);
-Bool			mcr_is_continuous(short mcrNumber);
-Bool			mcr_is_progressive(short mcrNumber);
-Bool			mcr_does_propagate(short mcrNumber);
+static __jo_force_inline unsigned char	mcr_get_type(_MCR_CTRL* macro) {
+	return macro->type;
+}
+
+static __jo_force_inline unsigned char	mcr_get_length(_MCR_CTRL* macro) {
+	return macro->length;
+}
+
+static __jo_force_inline Bool	mcr_is_variable_length(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_VARIABLE_LENGTH) != 0);
+}
+
+static __jo_force_inline Bool	mcr_is_relative(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_RELATIVE) != 0);
+}
+
+static __jo_force_inline Bool	mcr_is_continuous(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_CONTINUOUS) != 0);
+}
+
+static __jo_force_inline Bool	mcr_is_fixed(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_FIXED) != 0);
+}
+
+static __jo_force_inline Bool	mcr_does_jump_on_release(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_JUMP_ON_RELEASE) != 0);
+}
+
+static __jo_force_inline Bool	mcr_does_overflow(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_OVERFLOW) != 0);
+}
+
+static __jo_force_inline Bool	mcr_is_progressive(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_PROGRESSIVE) != 0);
+}
+
+static __jo_force_inline Bool	mcr_does_propagate(_MCR_CTRL* macro) {
+	return ((macro->traits & MCR_PROPAGATE) != 0);
+}
 
 void	get_macro_bounds(unsigned char type, int* lbound, int* ubound);
 int		clamp_macro_value(int value, unsigned char type);
 int		overflow_macro_value(int value, unsigned char type);
-unsigned short get_initial_macro_value(unsigned char type, short insNumber);
+unsigned short get_initial_macro_value(unsigned char type, _INS_CTRL* instrument);
 
 void	dsp_load_base_variables(void);
 void	dsp_set_variables(void);
@@ -564,8 +595,8 @@ void	chn_hard_reset_macros(short chnNumber);
 void	chn_soft_reset_macros(short chnNumber);
 
 void	chn_set_macro_values(short chnNumber);
-void	chn_set_final_pitch(short chnNumber, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune);
-void	chn_set_final_level(short chnNumber, short level, unsigned char scaling);
+void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune);
+void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _INS_CTRL* instrument, short level, unsigned char scaling);
 void	chn_set_values(short chnNumber);
 
 void	chn_release(short chnNumber);

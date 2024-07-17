@@ -14,6 +14,7 @@ Download the Jo Engine source code (https://www.jo-engine.org/download/ or https
 
 Note that this step only compiles the portion of the program that runs on the main processors of the Saturn. The code that actually controls the sound registers is located in the 'PROJ' folder; repeating the above steps with that folder instead will compile the sound driver and move it into 'Calypso''s data folder. If you do not wish to copy the sound driver automatically after compilation, simply remove the 'COPY' statement from 'compile.bat' in your favorite text editor. These steps are only necessary if you want to change the sound driver, though, as the original, precompiled driver is already included in 'Calypso'.
 
+(Important note: if you plan on editing the code yourself, many values #defined in 'pcmsys.h' have equivalents in the 'main.c' file in 'PROJ'. If these values are not the same (and you don't update 'sdrv.bin' by compiling 'main.c'), your program will not have sound!)
 
 
 

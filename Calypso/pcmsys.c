@@ -5,7 +5,6 @@
 #include <sl_def.h> //Mostly to link us with SBL file system
 #include "pcmsys.h"
 #include <SEGA_GFS.H>
-#include <jo/jo.h>
 
 static const int logtbl[] = {
 	/* 0 */		0,
@@ -646,57 +645,6 @@ void	mcr_set_data(short mcrNumber, short index, unsigned short data) {
 }
 
 
-unsigned char	mcr_get_type(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return mcrCtrl[mcrNumber].type;
-}
-
-unsigned char	mcr_get_length(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return mcrCtrl[mcrNumber].length;
-}
-
-Bool	mcr_is_variable_length(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_VARIABLE_LENGTH) != 0);
-}
-
-Bool	mcr_is_relative(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_RELATIVE) != 0);
-}
-
-Bool	mcr_is_continuous(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_CONTINUOUS) != 0);
-}
-
-Bool	mcr_is_fixed(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_FIXED) != 0);
-}
-
-Bool	mcr_does_jump_on_release(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_JUMP_ON_RELEASE) != 0);
-}
-
-Bool	mcr_does_overflow(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_OVERFLOW) != 0);
-}
-
-Bool	mcr_is_progressive(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_PROGRESSIVE) != 0);
-}
-
-Bool	mcr_does_propagate(short mcrNumber) {
-	if (mcrNumber < 0) return 0;
-	return ((mcrCtrl[mcrNumber].traits & MCR_PROPAGATE) != 0);
-}
-
-
 short	chn_get_current_instrument(short chnNumber) {
 	if (chnNumber < 0) return 0;
 	if (m68k_com->chnCtrl[chnNumber].instrumentID < INS_CTRL_MAX) {
@@ -709,27 +657,29 @@ short	chn_get_current_instrument(short chnNumber) {
 }
 
 void	chn_hard_reset_macros(short chnNumber) {
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
-		m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_UNINITIALIZED;
-		m68k_com->chnCtrl[chnNumber].macro_length_timers[i] = 0;
+		channel->macro_timers[i] = MACRO_UNINITIALIZED;
+		channel->macro_length_timers[i] = 0;
 	}
-	m68k_com->chnCtrl[chnNumber].macro_states = 0;
+	channel->macro_states = 0;
 }
 
 void	chn_soft_reset_macros(short chnNumber) {
-
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
 	short insNumber = chn_get_current_instrument(chnNumber);
 	if (insNumber < 0) {
 		insNumber = m68k_com->chnCtrl[chnNumber + insNumber].instrumentID - insNumber;
 	}
+	_INS_CTRL* instrument = &(insCtrl[insNumber]);
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
-		short mcrNumber = insCtrl[insNumber].macros[i];
+		short mcrNumber = instrument->macros[i];
 		if (mcrNumber != 0) {
 			mcrNumber--;
-			if (!mcr_is_continuous(mcrNumber)) {
-				m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_OFF;
-				m68k_com->chnCtrl[chnNumber].macro_length_timers[i] = 0;
-				m68k_com->chnCtrl[chnNumber].macro_states &= ~(1 << (i));
+			if (!mcr_is_continuous(&(mcrCtrl[mcrNumber]))) {
+				channel->macro_timers[i] = MACRO_OFF;
+				channel->macro_length_timers[i] = 0;
+				channel->macro_states &= ~(1 << (i));
 			}
 		}
 	}
@@ -804,7 +754,7 @@ void	dsp_set_variables(void) {
 	}
 }
 
-unsigned short	get_initial_macro_value(unsigned char type, short insNumber) {
+unsigned short	get_initial_macro_value(unsigned char type, _INS_CTRL* instrument) {
 	if (type >= MACRO_EFFECTADRS) {
 		return base_addresses[type - MACRO_EFFECTADRS];
 	}
@@ -814,59 +764,59 @@ unsigned short	get_initial_macro_value(unsigned char type, short insNumber) {
 	else {
 		switch (type) {
 		case MACRO_SAMPLEOFFSET:
-			return insCtrl[insNumber].sample_offset;
+			return instrument->sample_offset;
 		case MACRO_LOOPSTART:
-			return insCtrl[insNumber].loopstart_offset;
+			return instrument->loopstart_offset;
 		case MACRO_LOOPEND:
-			return insCtrl[insNumber].loopend_offset;
+			return instrument->loopend_offset;
 		case MACRO_TOTALLEVEL:
-			return insCtrl[insNumber].totallevel;
+			return instrument->totallevel;
 		case MACRO_VOLUME:
-			return insCtrl[insNumber].volume;
+			return instrument->volume;
 		case MACRO_ATTACK:
-			return insCtrl[insNumber].attack_hold & 0x1F;
+			return instrument->attack_hold & 0x1F;
 		case MACRO_DECAY1:
-			return insCtrl[insNumber].decay1;
+			return instrument->decay1;
 		case MACRO_SUSTAIN:
-			return insCtrl[insNumber].sustain;
+			return instrument->sustain;
 		case MACRO_DECAY2:
-			return insCtrl[insNumber].decay2;
+			return instrument->decay2;
 		case MACRO_RELEASE:
-			return insCtrl[insNumber].release;
+			return instrument->release;
 		case MACRO_KEYSCALING:
-			return insCtrl[insNumber].key_scaling_sync & 0xF;
+			return instrument->key_scaling_sync & 0xF;
 		case MACRO_LFOFREQ:
-			return insCtrl[insNumber].lfo_freq;
+			return instrument->lfo_freq;
 		case MACRO_PITCHLFOSTRENGTH:
-			return insCtrl[insNumber].lfo_pitch & 0x7;
+			return instrument->lfo_pitch & 0x7;
 		case MACRO_AMPLFOSTRENGTH:
-			return insCtrl[insNumber].lfo_amp & 0x7;
+			return instrument->lfo_amp & 0x7;
 		case MACRO_MODLEVEL:
-			return insCtrl[insNumber].mod_volume;
+			return instrument->mod_volume;
 		case MACRO_PITCHMULTIPLIER:
-			return insCtrl[insNumber].freq_ratio >> 8;
+			return instrument->freq_ratio >> 8;
 		case MACRO_PITCHDIVIDER:
-			return insCtrl[insNumber].loopstart_offset & 0xFF;
+			return instrument->loopstart_offset & 0xFF;
 		case MACRO_LEVELSCALING:
-			return insCtrl[insNumber].loopstart_offset & 0xF;
+			return instrument->loopstart_offset & 0xF;
 		case MACRO_EFFECTVOLUME:
-			return insCtrl[insNumber].effect_volume;
+			return instrument->effect_volume;
 		case MACRO_INPUTLEVEL:
-			return insCtrl[insNumber].input_volume;
+			return instrument->input_volume;
 		case MACRO_PAN:
-			return (insCtrl[insNumber].pan < 0x10) ? -insCtrl[insNumber].pan : (insCtrl[insNumber].pan - 0x10);
+			return (instrument->pan < 0x10) ? -instrument->pan : (instrument->pan - 0x10);
 		case MACRO_NOTEOFFSET:
-			return insCtrl[insNumber].pitch_offset & 0xFF;
+			return (char)(instrument->pitch_offset & 0xFF);
 		case MACRO_CENTDETUNE:
-			return insCtrl[insNumber].pitch_offset >> 8;
+			return instrument->pitch_offset >> 8;
 		case MACRO_REGISTERDETUNE:
-			return insCtrl[insNumber].register_detune;
+			return instrument->register_detune;
 		case MACRO_MODINPUTX:
-			return insCtrl[insNumber].mod_input_x;
+			return instrument->mod_input_x;
 		case MACRO_MODINPUTY:
-			return insCtrl[insNumber].mod_input_y;
+			return instrument->mod_input_y;
 		case MACRO_EFFECTPAN:
-			return (insCtrl[insNumber].effect_pan < 0x10) ? -insCtrl[insNumber].effect_pan : (insCtrl[insNumber].effect_pan - 0x10);
+			return (instrument->effect_pan < 0x10) ? -instrument->effect_pan : (instrument->effect_pan - 0x10);
 		default:
 			return 0;
 		}
@@ -887,58 +837,65 @@ void	chn_set_macro_values(short chnNumber) {
 		insNumber = patchLeaderInsNumber - insNumber;
 	}
 
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
+	_INS_CTRL* instrument = &(insCtrl[insNumber]);
+	_INS_CTRL* patch_leader_instrument = &(insCtrl[patchLeaderInsNumber]);
+
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
-		short mcrNumber = insCtrl[insNumber].macros[i];
-		if (insCtrl[patchLeaderChnNumber].macros[i] != 0) {
-			if (mcr_does_propagate(insCtrl[patchLeaderChnNumber].macros[i] - 1)) {
-				mcrNumber = insCtrl[patchLeaderChnNumber].macros[i];
+		short mcrNumber = instrument->macros[i];
+		short patch_leader_mcrNumber = patch_leader_instrument->macros[i];
+		unsigned char* macro_timer = &(channel->macro_timers[i]);
+		if (patch_leader_mcrNumber != 0) {
+			if (mcr_does_propagate(&(mcrCtrl[patch_leader_mcrNumber - 1]))) {
+				mcrNumber = patch_leader_mcrNumber;
 			}
 		}
 		if (mcrNumber == 0) {
-			m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_OFF;
+			*macro_timer = MACRO_OFF;
 		}
-		else if ((m68k_com->chnCtrl[chnNumber].macro_timers[i] == MACRO_OFF || m68k_com->chnCtrl[chnNumber].macro_timers[i] == MACRO_UNINITIALIZED) && ((m68k_com->chnCtrl[chnNumber].melodic_data & MELODIC_KEYON) != 0)) {
-			m68k_com->chnCtrl[chnNumber].macro_timers[i] = 0;
+		else if ((*macro_timer == MACRO_OFF || *macro_timer == MACRO_UNINITIALIZED) && ((channel->melodic_data & MELODIC_KEYON) != 0)) {
+			*macro_timer = 0;
 		}
-		if (m68k_com->chnCtrl[chnNumber].macro_timers[i] != MACRO_OFF && m68k_com->chnCtrl[chnNumber].macro_timers[i] != MACRO_UNINITIALIZED) {
+		if (*macro_timer != MACRO_OFF && *macro_timer != MACRO_UNINITIALIZED) {
 			mcrNumber--;
-			Bool is_released = ((m68k_com->chnCtrl[i].macro_states & (1 << i)) != 0);
-			Bool should_jump = mcr_does_jump_on_release(mcrNumber);
-			if ((should_jump && is_released && (m68k_com->chnCtrl[chnNumber].macro_timers[i] <= mcrCtrl[mcrNumber].release || m68k_com->chnCtrl[chnNumber].macro_timers[i] == MACRO_AT_RELEASE))
-				|| (!should_jump && is_released && m68k_com->chnCtrl[chnNumber].macro_timers[i] == MACRO_AT_RELEASE)) {
-				m68k_com->chnCtrl[chnNumber].macro_timers[i] = mcrCtrl[mcrNumber].release + 1;
+			_MCR_CTRL* macro = &(mcrCtrl[mcrNumber]);
+			Bool is_released = ((channel->macro_states & (1 << i)) != 0);
+			Bool should_jump = mcr_does_jump_on_release(macro);
+			if ((should_jump && is_released && (*macro_timer <= macro->release || *macro_timer == MACRO_AT_RELEASE))
+				|| (!should_jump && is_released && *macro_timer == MACRO_AT_RELEASE)) {
+				*macro_timer = macro->release + 1;
 			}
-			if (m68k_com->chnCtrl[chnNumber].macro_timers[i] >= mcrCtrl[mcrNumber].length) {
-				if (m68k_com->chnCtrl[chnNumber].macro_timers[i] != MACRO_AT_RELEASE) {
-					m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_OFF;
+			if (*macro_timer >= macro->length) {
+				if (*macro_timer != MACRO_AT_RELEASE) {
+					*macro_timer = MACRO_OFF;
 				}
 			}
 			else {
-				unsigned short macro_value = (mcr_is_variable_length(mcrNumber)) ? mcrCtrl[mcrNumber].data[m68k_com->chnCtrl[chnNumber].macro_timers[i] * 2] : mcrCtrl[mcrNumber].data[m68k_com->chnCtrl[chnNumber].macro_timers[i]];
+				unsigned short macro_value = (mcr_is_variable_length(macro)) ? macro->data[*macro_timer * 2] : macro->data[*macro_timer];
 				int macro_value_buffer;
-				if (mcr_is_relative(mcrNumber)) {
-					if ((m68k_com->chnCtrl[chnNumber].melodic_data & MELODIC_KEYON) != 0 && (!mcr_is_continuous(mcrNumber) && !mcr_is_progressive(mcrNumber))) {
-						if (mcr_is_fixed(mcrNumber)) {
-							m68k_com->chnCtrl[chnNumber].macro_values[i] = 0;
+				if (mcr_is_relative(macro)) {
+					if ((channel->melodic_data & MELODIC_KEYON) != 0 && (!mcr_is_continuous(macro) && !mcr_is_progressive(macro))) {
+						if (mcr_is_fixed(macro)) {
+							channel->macro_values[i] = 0;
 						}
 						else {
-							m68k_com->chnCtrl[chnNumber].macro_values[i] = get_initial_macro_value(mcrCtrl[mcrNumber].type, insNumber);
+							channel->macro_values[i] = get_initial_macro_value(macro->type, instrument);
 						}
 					}
-					if (mcrCtrl[mcrNumber].type >= FIRST_SIGNED) {
-						macro_value_buffer = (short)(m68k_com->chnCtrl[chnNumber].macro_values[i]);
+					if (macro->type >= FIRST_SIGNED) {
+						macro_value_buffer = (short)(channel->macro_values[i]);
 					}
 					else {
-						macro_value_buffer = m68k_com->chnCtrl[chnNumber].macro_values[i];
+						macro_value_buffer = channel->macro_values[i];
 					}
 					macro_value_buffer += (short)macro_value;
 				}
 				else {
-					if (mcrCtrl[mcrNumber].type >= FIRST_SIGNED) {
-						if (mcrCtrl[mcrNumber].type == MACRO_NOTEOFFSET
-							|| mcrCtrl[mcrNumber].type == MACRO_CENTDETUNE
-							|| mcrCtrl[mcrNumber].type == MACRO_REGISTERDETUNE) {
-							macro_value_buffer = (short)macro_value + get_initial_macro_value(mcrCtrl[mcrNumber].type, insNumber);
+					if (macro->type >= FIRST_SIGNED) {
+						if (macro->type == MACRO_NOTEOFFSET
+							|| macro->type == MACRO_CENTDETUNE
+							|| macro->type == MACRO_REGISTERDETUNE) {
+							macro_value_buffer = (short)macro_value + (short)get_initial_macro_value(macro->type, instrument);
 						}
 						else {
 							macro_value_buffer = (short)macro_value;
@@ -948,56 +905,57 @@ void	chn_set_macro_values(short chnNumber) {
 						macro_value_buffer = macro_value;
 					}
 				}
-				if (mcr_does_overflow(mcrNumber)) {
-					macro_value_buffer = overflow_macro_value(macro_value_buffer, mcrCtrl[mcrNumber].type);
+				if (mcr_does_overflow(macro)) {
+					macro_value_buffer = overflow_macro_value(macro_value_buffer, macro->type);
 				}
 				else {
-					macro_value_buffer = clamp_macro_value(macro_value_buffer, mcrCtrl[mcrNumber].type);
+					macro_value_buffer = clamp_macro_value(macro_value_buffer, macro->type);
 				}
-				if (mcrCtrl[mcrNumber].type >= FIRST_SIGNED) {
+				if (macro->type >= FIRST_SIGNED) {
 					macro_value = (short)macro_value_buffer;
 				}
 				else {
 					macro_value = (unsigned short)macro_value_buffer;
 				}
 				
-				m68k_com->chnCtrl[chnNumber].macro_values[i] = macro_value;
+				channel->macro_values[i] = macro_value;
 
 				unsigned char nearest_loop = MACRO_OFF;
-				if (m68k_com->chnCtrl[chnNumber].macro_timers[i] >= mcrCtrl[mcrNumber].loop_1
-					&& ((m68k_com->chnCtrl[chnNumber].macro_timers[i] <= mcrCtrl[mcrNumber].release) == (mcrCtrl[mcrNumber].loop_1 <= mcrCtrl[mcrNumber].release))) {
-					nearest_loop = mcrCtrl[mcrNumber].loop_1;
+				if (*macro_timer >= macro->loop_1
+					&& ((*macro_timer <= macro->release) == (macro->loop_1 <= macro->release))) {
+					nearest_loop = macro->loop_1;
 				}
-				if (m68k_com->chnCtrl[chnNumber].macro_timers[i] >= mcrCtrl[mcrNumber].loop_2
-					&& ((m68k_com->chnCtrl[chnNumber].macro_timers[i] <= mcrCtrl[mcrNumber].release) == (mcrCtrl[mcrNumber].loop_2 <= mcrCtrl[mcrNumber].release))) {
-					nearest_loop = mcrCtrl[mcrNumber].loop_2;
+				if (*macro_timer >= macro->loop_2
+					&& ((*macro_timer <= macro->release) == (macro->loop_2 <= macro->release))) {
+					nearest_loop = macro->loop_2;
 				}
-				if (nearest_loop == mcrCtrl[mcrNumber].loop_2 && ((mcrCtrl[mcrNumber].loop_2 <= mcrCtrl[mcrNumber].release) == (mcrCtrl[mcrNumber].loop_1 <= mcrCtrl[mcrNumber].release))) {
-					nearest_loop = (mcrCtrl[mcrNumber].loop_2 > mcrCtrl[mcrNumber].loop_1) ? mcrCtrl[mcrNumber].loop_2 : mcrCtrl[mcrNumber].loop_1;
+				if (nearest_loop == macro->loop_2 && ((macro->loop_2 <= macro->release) == (macro->loop_1 <= macro->release))) {
+					nearest_loop = (macro->loop_2 > macro->loop_1) ? macro->loop_2 : macro->loop_1;
 				}
 
-				if (mcr_is_variable_length(mcrNumber)) {
-					unsigned short current_length = mcrCtrl[mcrNumber].data[m68k_com->chnCtrl[chnNumber].macro_timers[i] * 2 + 1];
-					m68k_com->chnCtrl[chnNumber].macro_length_timers[i]++;
-					if (m68k_com->chnCtrl[chnNumber].macro_length_timers[i] >= current_length) {
-						m68k_com->chnCtrl[chnNumber].macro_length_timers[i] = 0;
-						m68k_com->chnCtrl[chnNumber].macro_timers[i]++;
+				if (mcr_is_variable_length(macro)) {
+					unsigned short current_length = macro->data[*macro_timer * 2 + 1];
+					unsigned short* macro_length_timer = &(channel->macro_length_timers[i]);
+					(*macro_length_timer)++;
+					if (*macro_length_timer >= current_length) {
+						*macro_length_timer = 0;
+						(*macro_timer)++;
 					}
 				}
 				else {
-					m68k_com->chnCtrl[chnNumber].macro_timers[i]++;
+					(*macro_timer)++;
 				}
-				if (m68k_com->chnCtrl[chnNumber].macro_timers[i] >= mcrCtrl[mcrNumber].length
-					|| (!is_released && (m68k_com->chnCtrl[chnNumber].macro_timers[i] > mcrCtrl[mcrNumber].release))) {
+				if (*macro_timer >= macro->length
+					|| (!is_released && (*macro_timer > macro->release))) {
 					
 					if (nearest_loop != MACRO_OFF) {
-						m68k_com->chnCtrl[chnNumber].macro_timers[i] = nearest_loop;
+						*macro_timer = nearest_loop;
 					}
-					else if (m68k_com->chnCtrl[chnNumber].macro_timers[i] < mcrCtrl[mcrNumber].length) { // If we're before the release
-						m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_AT_RELEASE;
+					else if (*macro_timer < macro->length) { // If we're before the release
+						*macro_timer = MACRO_AT_RELEASE;
 					}
 					else {
-						m68k_com->chnCtrl[chnNumber].macro_timers[i] = MACRO_OFF;
+						*macro_timer = MACRO_OFF;
 					}
 				}
 			}
@@ -1012,19 +970,11 @@ void	chn_set_macro_values(short chnNumber) {
 #define OCTAVE_MIDPOINT 8
 #define OCTAVE_SIZE 16
 #define SEMITONES_PER_OCT 12
-void	chn_set_final_pitch(short chnNumber, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune) {
-	if (chnNumber < 0) return;
-	short finalChnNumber = chnNumber;
-	short insNumber = chn_get_current_instrument(chnNumber);
-	if (insNumber < 0) {
-		chnNumber += insNumber;
-		insNumber = m68k_com->chnCtrl[chnNumber].instrumentID - insNumber;
-	}
-	short pcmNumber = ins_get_current_sample(insNumber, note);
-	short semitone = note_offset + ((insCtrl[insNumber].use_multi != 0 && mlt_is_base_note_override(insCtrl[insNumber].sampleID) ? 0 : (char)note)) - ((char)(pcmCtrl[pcmNumber].base_note));
+void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune) {
+	short semitone = note_offset + ((instrument->use_multi != 0 && mlt_is_base_note_override(instrument->sampleID) ? 0 : (char)note)) - ((char)(sample->base_note));
 	short pitch_as_short;
-	jo_fixed pitch = jo_int2fixed(pcmCtrl[pcmNumber].base_pitch & MAX_PITCH);
-	signed char octave = (pcmCtrl[pcmNumber].base_pitch >> 11);
+	jo_fixed pitch = jo_int2fixed(sample->base_pitch & MAX_PITCH);
+	signed char octave = (sample->base_pitch >> 11);
 
 	if (octave >= OCTAVE_MIDPOINT)
 		octave -= OCTAVE_SIZE;
@@ -1111,43 +1061,36 @@ void	chn_set_final_pitch(short chnNumber, short note, short note_offset, short c
 
 	if (octave < 0) 
 		octave += OCTAVE_SIZE;
-	m68k_com->chnCtrl[finalChnNumber].final_pitch = (pitch_as_short & MAX_PITCH) | (octave << 11);
-	if (pcmCtrl[pcmNumber].bitDepth != PCM_TYPE_ADX) {
-		m68k_com->chnCtrl[finalChnNumber].bytes_per_blank = calculate_bytes_per_blank_with_final_pitch(finalChnNumber);
+	channel->final_pitch = (pitch_as_short & MAX_PITCH) | (octave << 11);
+
+	if (sample->bitDepth != PCM_TYPE_ADX) {
+		channel->bytes_per_blank = calculate_bytes_per_blank_with_pitchword(channel->final_pitch, sample->bitDepth);
 	}
 }
 
-void	chn_set_final_level(short chnNumber, short level, unsigned char scaling) {
-	if (chnNumber < 0) return;
-	short finalChnNumber = chnNumber;
-	short insNumber = chn_get_current_instrument(chnNumber);
-	if (insNumber < 0) {
-		chnNumber += insNumber;
-		insNumber = m68k_com->chnCtrl[chnNumber].instrumentID - insNumber;
-	}
-
+void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _INS_CTRL* instrument, short level, unsigned char scaling) {
 	if (scaling != 0) {
-		short octave = m68k_com->chnCtrl[finalChnNumber].final_pitch >> 11;
+		short octave = channel->final_pitch >> 11;
 		if (octave < 8) {
 			octave += 8;
 		}
 		else {
 			octave -= 8;
 		}
-		short fine = m68k_com->chnCtrl[chnNumber].final_pitch & MAX_PITCH;
+		short fine = channel->final_pitch & MAX_PITCH;
 		short pitch = fine | (octave << 10);
 		short level_offset = (16 * scaling * pitch) / (1 << 14);
 		level += level_offset;
 	}
-	if (insCtrl[insNumber].ignore_velocity == 0) {
-		level += 0xFF - m68k_com->chnCtrl[chnNumber].velocity;
-		level += 0xFF - m68k_com->chnCtrl[chnNumber].channel_volume;
+	if (instrument->ignore_velocity == 0) {
+		level += 0xFF - patch_leader_channel->velocity;
+		level += 0xFF - patch_leader_channel->channel_volume;
 	}
 	if (level > 0xFF) {
-		m68k_com->chnCtrl[finalChnNumber].attenuation = 0xFF;
+		channel->attenuation = 0xFF;
 	}
 	else {
-		m68k_com->chnCtrl[finalChnNumber].attenuation = (unsigned char)level;
+		channel->attenuation = (unsigned char)level;
 	}	
 }
 
@@ -1166,219 +1109,226 @@ void	chn_set_values(short chnNumber) {
 	short pcmNumber = ins_get_current_sample(insNumber, m68k_com->chnCtrl[chnNumber].note);
 	short loop_type = (pcmCtrl[pcmNumber].loopType >= 0) ? pcmCtrl[pcmNumber].loopType : 1;
 
-	m68k_com->chnCtrl[chnNumber].key_data = (loop_type << 5) | ((pcmCtrl[pcmNumber].bitDepth % 2) << 4) | (insCtrl[insNumber].bit_reverse << 9) | (insCtrl[insNumber].noise_mode << 7);
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
+	_CHN_CTRL* patch_leader_channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[patchLeaderChnNumber]);
+	_INS_CTRL* instrument = &(insCtrl[insNumber]);
+	_PCM_CTRL* sample = &(pcmCtrl[pcmNumber]);
+
+	channel->key_data = (loop_type << 5) | ((sample->bitDepth % 2) << 4) | (instrument->bit_reverse << 9) | (instrument->noise_mode << 7);
 
 	// chnCtrl's volume is used here instead of the instrument for Reasons (supporting poneSound's direct-only volume control)
-	Bool useInsVolume = (m68k_com->chnCtrl[chnNumber].volume == 0);
+	Bool useInsVolume = (channel->volume == 0);
 	if (useInsVolume) {
-		m68k_com->chnCtrl[chnNumber].volume = insCtrl[insNumber].volume;
+		channel->volume = instrument->volume;
 	}
-	m68k_com->chnCtrl[chnNumber].pan_send = m68k_com->chnCtrl[chnNumber].volume << 13 | insCtrl[insNumber].pan << 8 | insCtrl[insNumber].effect_volume << 5 | insCtrl[insNumber].effect_pan;
-	m68k_com->chnCtrl[chnNumber].lfo_data = (insCtrl[insNumber].lfo_amp) | (insCtrl[insNumber].lfo_pitch << 5) | (insCtrl[insNumber].lfo_freq << 10);
-	if (insCtrl[insNumber].use_envelope != 0) {
-		m68k_com->chnCtrl[chnNumber].decay_1_2_attack = insCtrl[insNumber].attack_hold | insCtrl[insNumber].decay1 << 6 | insCtrl[insNumber].decay2 << 11;
-		m68k_com->chnCtrl[chnNumber].key_decay_release = insCtrl[insNumber].release | insCtrl[insNumber].sustain << 5 | insCtrl[insNumber].key_scaling_sync << 10;
+	channel->pan_send = channel->volume << 13 | instrument->pan << 8 | instrument->effect_volume << 5 | instrument->effect_pan;
+	channel->lfo_data = (instrument->lfo_amp) | (instrument->lfo_pitch << 5) | (instrument->lfo_freq << 10);
+	if (instrument->use_envelope != 0) {
+		channel->decay_1_2_attack = instrument->attack_hold | instrument->decay1 << 6 | instrument->decay2 << 11;
+		channel->key_decay_release = instrument->release | instrument->sustain << 5 | instrument->key_scaling_sync << 10;
 	}
 	else {
 		// We could skip writing these and specify direct data playback, but as far as I understand, this removes sound
 		// panning. Attenuation, bit 9 [SD].
-		m68k_com->chnCtrl[chnNumber].decay_1_2_attack = 31;
-		m68k_com->chnCtrl[chnNumber].key_decay_release = 31;
+		channel->decay_1_2_attack = 31;
+		channel->key_decay_release = 31;
 	}
 	// Set the volume back for future reuse
 	if (useInsVolume) {
-		m68k_com->chnCtrl[chnNumber].volume = 0;
+		channel->volume = 0;
 	}
 
-	m68k_com->chnCtrl[chnNumber].FM_data = insCtrl[insNumber].mod_input_y | insCtrl[insNumber].mod_input_x << 6 | insCtrl[insNumber].mod_volume << 12;
+	channel->FM_data = instrument->mod_input_y | instrument->mod_input_x << 6 | instrument->mod_volume << 12;
 
-	m68k_com->chnCtrl[chnNumber].input_sel = insCtrl[insNumber].input_volume | insCtrl[insNumber].effects_slot << 3;
+	channel->input_sel = instrument->input_volume | instrument->effects_slot << 3;
 
-	m68k_com->chnCtrl[chnNumber].lfo_delay = insCtrl[insNumber].lfo_delay;
-	m68k_com->chnCtrl[chnNumber].reset_bits &= 1;
+	channel->lfo_delay = instrument->lfo_delay;
+	channel->reset_bits &= 1;
 
-	m68k_com->chnCtrl[chnNumber].decompression_size = pcmCtrl[pcmNumber].decompression_size;
+	channel->decompression_size = sample->decompression_size;
 
 	//jo_set_default_background_color(JO_COLOR_DarkCyan);
 
-	unsigned short sample_offset = insCtrl[insNumber].sample_offset;
-	unsigned short loopstart_offset = insCtrl[insNumber].loopstart_offset;
-	unsigned short loopend_offset = insCtrl[insNumber].loopend_offset;
+	unsigned short sample_offset = instrument->sample_offset;
+	unsigned short loopstart_offset = instrument->loopstart_offset;
+	unsigned short loopend_offset = instrument->loopend_offset;
 
-	short level = insCtrl[insNumber].totallevel;
-	unsigned char scaling = insCtrl[insNumber].level_scaling;
+	short level = instrument->totallevel;
+	unsigned char scaling = instrument->level_scaling;
 
 	short note = m68k_com->chnCtrl[patchLeaderChnNumber].note;
-	short note_offset = (char)(insCtrl[insNumber].pitch_offset & 0xFF);
-	short cent = (char)(insCtrl[insNumber].pitch_offset >> 8);
-	short reg_detune = insCtrl[insNumber].register_detune;
-	short freq_mul = (insCtrl[insNumber].freq_ratio & 0xFF) + 1;
-	short freq_div = (insCtrl[insNumber].freq_ratio >> 8) + 1;
+	short note_offset = (char)(instrument->pitch_offset & 0xFF);
+	short cent = (char)(instrument->pitch_offset >> 8);
+	short reg_detune = instrument->register_detune;
+	short freq_mul = (instrument->freq_ratio & 0xFF) + 1;
+	short freq_div = (instrument->freq_ratio >> 8) + 1;
 
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
-		short mcrNumber = insCtrl[insNumber].macros[i];
-		short mcrChnNumber = chnNumber;
-		if (insCtrl[patchLeaderInsNumber].macros[i] != 0) {
-			if (mcr_does_propagate(insCtrl[patchLeaderInsNumber].macros[i] - 1)) {
-				mcrNumber = insCtrl[patchLeaderInsNumber].macros[i];
+		short mcrNumber = instrument->macros[i];
+		short patch_leader_macro = insCtrl[patchLeaderInsNumber].macros[i];
+		if (patch_leader_macro != 0) {
+			if (mcr_does_propagate(&(mcrCtrl[patch_leader_macro - 1]))) {
+				mcrNumber = patch_leader_macro;
 			}
 		}		
-		if (m68k_com->chnCtrl[mcrChnNumber].macro_timers[i] != MACRO_UNINITIALIZED) {	
+		if (channel->macro_timers[i] != MACRO_UNINITIALIZED) {
 			if (mcrNumber != 0) {
 				mcrNumber--;
-				if (mcr_get_length(mcrNumber) > 0 && (!mcr_is_fixed(mcrNumber) || m68k_com->chnCtrl[chnNumber].macro_timers[i] != MACRO_OFF)) {
-					if (mcrCtrl[mcrNumber].type >= MACRO_EFFECTADRS) {
-						addresses[mcrCtrl[mcrNumber].type - MACRO_EFFECTADRS] = m68k_com->chnCtrl[chnNumber].macro_values[i];
+				_MCR_CTRL* macro = &(mcrCtrl[mcrNumber]);
+				if (mcr_get_length(macro) > 0 && (!mcr_is_fixed(macro) || channel->macro_timers[i] != MACRO_OFF)) {
+					if (macro->type >= MACRO_EFFECTADRS) {
+						addresses[macro->type - MACRO_EFFECTADRS] = channel->macro_values[i];
 					}
-					else if (mcrCtrl[mcrNumber].type >= MACRO_EFFECTCOEF) {
-						coefficients[mcrCtrl[mcrNumber].type - MACRO_EFFECTCOEF] = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
+					else if (macro->type >= MACRO_EFFECTCOEF) {
+						coefficients[macro->type - MACRO_EFFECTCOEF] = (short)channel->macro_values[i];
 					}
 					else {
 						short value_buffer = 0;
-						switch (mcrCtrl[mcrNumber].type) {
+						short macro_value = channel->macro_values[i];
+						switch (macro->type) {
 						case MACRO_KEYON:
-							m68k_com->chnCtrl[chnNumber].reset_bits |= (1 << 4) | (m68k_com->chnCtrl[chnNumber].macro_values[i] << 5);
+							channel->reset_bits |= (1 << 4) | (macro_value << 5);
 							break;
 						case MACRO_SAMPLETRAITS:
-							value_buffer = (m68k_com->chnCtrl[chnNumber].macro_values[i] & 1) ^ (((m68k_com->chnCtrl[chnNumber].macro_values[i] & 2) != 0) ? 0x3 : 0);
+							value_buffer = (macro_value & 1) ^ (((macro_value & 2) != 0) ? 0x3 : 0);
 							value_buffer <<= 2;
-							value_buffer |= (m68k_com->chnCtrl[chnNumber].macro_values[i] & 4) >> 2;
-							m68k_com->chnCtrl[chnNumber].key_data &= ((0xFFFF >> (16 - 7)) | (0xFFFF << 11));
-							m68k_com->chnCtrl[chnNumber].key_data |= value_buffer << 7;
+							value_buffer |= (macro_value & 4) >> 2;
+							channel->key_data &= ((0xFFFF >> (16 - 7)) | (0xFFFF << 11));
+							channel->key_data |= value_buffer << 7;
 							break;
 						case MACRO_ENVELOPETRAITS:
-							value_buffer = (m68k_com->chnCtrl[chnNumber].macro_values[i] & 1);
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 6));
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack |= value_buffer << 5;
-							value_buffer = (m68k_com->chnCtrl[chnNumber].macro_values[i] & 3) >> 1;
-							m68k_com->chnCtrl[chnNumber].key_decay_release &= ((0xFFFF >> (16 - 14)) | (0xFFFF << 15));
-							m68k_com->chnCtrl[chnNumber].key_decay_release |= value_buffer << 14;
+							value_buffer = (macro_value & 1);
+							channel->decay_1_2_attack &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 6));
+							channel->decay_1_2_attack |= value_buffer << 5;
+							value_buffer = (macro_value & 3) >> 1;
+							channel->key_decay_release &= ((0xFFFF >> (16 - 14)) | (0xFFFF << 15));
+							channel->key_decay_release |= value_buffer << 14;
 							break;
 						case MACRO_LFORESET:
-							m68k_com->chnCtrl[chnNumber].reset_bits |= (1 << 1) | (m68k_com->chnCtrl[chnNumber].macro_values[i] << 2);
+							channel->reset_bits |= (1 << 1) | (macro_value << 2);
 							break;
 						case MACRO_SAMPLEOFFSET:
-							sample_offset = m68k_com->chnCtrl[chnNumber].macro_values[i];
+							sample_offset = macro_value;
 							break;
 						case MACRO_LOOPSTART:
-							loopstart_offset = m68k_com->chnCtrl[chnNumber].macro_values[i];
+							loopstart_offset = macro_value;
 							break;
 						case MACRO_LOOPEND:
-							loopend_offset = m68k_com->chnCtrl[chnNumber].macro_values[i];
+							loopend_offset = macro_value;
 							break;
 						case MACRO_PITCHLFOWAVEFORM:
-							m68k_com->chnCtrl[chnNumber].lfo_data &= ((0xFFFF >> (16 - 8)) | (0xFFFF << 10));
-							m68k_com->chnCtrl[chnNumber].lfo_data |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 8;
+							channel->lfo_data &= ((0xFFFF >> (16 - 8)) | (0xFFFF << 10));
+							channel->lfo_data |= macro_value << 8;
 							break;
 						case MACRO_AMPLFOWAVEFORM:
-							m68k_com->chnCtrl[chnNumber].lfo_data &= ((0xFFFF >> (16 - 3)) | (0xFFFF << 5));
-							m68k_com->chnCtrl[chnNumber].lfo_data |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 3;
+							channel->lfo_data &= ((0xFFFF >> (16 - 3)) | (0xFFFF << 5));
+							channel->lfo_data |= macro_value << 3;
 							break;
 						case MACRO_EFFECTSLOT:
-							m68k_com->chnCtrl[chnNumber].input_sel &= ((0xFFFF >> (16 - 3)) | (0xFFFF << 7));
-							m68k_com->chnCtrl[chnNumber].input_sel |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 3;
+							channel->input_sel &= ((0xFFFF >> (16 - 3)) | (0xFFFF << 7));
+							channel->input_sel |= macro_value << 3;
 							break;
 						case MACRO_TOTALLEVEL:
-							level = m68k_com->chnCtrl[chnNumber].macro_values[i];
+							level = macro_value;
 							break;
 						case MACRO_LEVELSCALING:
-							scaling = m68k_com->chnCtrl[chnNumber].macro_values[i];
+							scaling = macro_value;
 							break;
 						case MACRO_VOLUME:
-							m68k_com->chnCtrl[chnNumber].pan_send &= (0xFFFF >> (16 - 13));
-							m68k_com->chnCtrl[chnNumber].pan_send |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 13;
+							channel->pan_send &= (0xFFFF >> (16 - 13));
+							channel->pan_send |= macro_value << 13;
 							break;
 						case MACRO_ATTACK:
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack &= (0xFFFF << 5);
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack |= m68k_com->chnCtrl[chnNumber].macro_values[i];
+							channel->decay_1_2_attack &= (0xFFFF << 5);
+							channel->decay_1_2_attack |= macro_value;
 							break;
 						case MACRO_DECAY1:
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack &= ((0xFFFF >> (16 - 6)) | (0xFFFF << 11));
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 6;
+							channel->decay_1_2_attack &= ((0xFFFF >> (16 - 6)) | (0xFFFF << 11));
+							channel->decay_1_2_attack |= macro_value << 6;
 							break;
 						case MACRO_SUSTAIN:
-							m68k_com->chnCtrl[chnNumber].key_decay_release &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 10));
-							m68k_com->chnCtrl[chnNumber].key_decay_release |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 5;
+							channel->key_decay_release &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 10));
+							channel->key_decay_release |= macro_value << 5;
 							break;
 						case MACRO_DECAY2:
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack &= (0xFFFF >> (16 - 11));
-							m68k_com->chnCtrl[chnNumber].decay_1_2_attack |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 11;
+							channel->decay_1_2_attack &= (0xFFFF >> (16 - 11));
+							channel->decay_1_2_attack |= macro_value << 11;
 							break;
 						case MACRO_RELEASE:
-							m68k_com->chnCtrl[chnNumber].key_decay_release &= (0xFFFF << 5);
-							m68k_com->chnCtrl[chnNumber].key_decay_release |= m68k_com->chnCtrl[chnNumber].macro_values[i];
+							channel->key_decay_release &= (0xFFFF << 5);
+							channel->key_decay_release |= macro_value;
 							break;
 						case MACRO_KEYSCALING:
-							m68k_com->chnCtrl[chnNumber].key_decay_release &= ((0xFFFF >> (16 - 10)) | (0xFFFF << 14));
-							m68k_com->chnCtrl[chnNumber].key_decay_release |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 10;
+							channel->key_decay_release &= ((0xFFFF >> (16 - 10)) | (0xFFFF << 14));
+							channel->key_decay_release |= macro_value << 10;
 							break;
 						case MACRO_LFOFREQ:
-							m68k_com->chnCtrl[chnNumber].lfo_data &= ((0xFFFF >> (16 - 10)) | (0xFFFF << 15));
-							m68k_com->chnCtrl[chnNumber].lfo_data |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 10;
+							channel->lfo_data &= ((0xFFFF >> (16 - 10)) | (0xFFFF << 15));
+							channel->lfo_data |= macro_value << 10;
 							break;
 						case MACRO_PITCHLFOSTRENGTH:
-							m68k_com->chnCtrl[chnNumber].lfo_data &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 8));
-							m68k_com->chnCtrl[chnNumber].lfo_data |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 5;
+							channel->lfo_data &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 8));
+							channel->lfo_data |= macro_value << 5;
 							break;
 						case MACRO_AMPLFOSTRENGTH:
-							m68k_com->chnCtrl[chnNumber].lfo_data &= (0xFFFF << 3);
-							m68k_com->chnCtrl[chnNumber].lfo_data |= m68k_com->chnCtrl[chnNumber].macro_values[i];
+							channel->lfo_data &= (0xFFFF << 3);
+							channel->lfo_data |= macro_value;
 							break;
 						case MACRO_MODLEVEL:
-							m68k_com->chnCtrl[chnNumber].FM_data &= (0xFFFF >> (16 - 12));
-							m68k_com->chnCtrl[chnNumber].FM_data |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 12;
+							channel->FM_data &= (0xFFFF >> (16 - 12));
+							channel->FM_data |= macro_value << 12;
 							break;
 						case MACRO_EFFECTVOLUME:
-							m68k_com->chnCtrl[chnNumber].pan_send &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 8));
-							m68k_com->chnCtrl[chnNumber].pan_send |= m68k_com->chnCtrl[chnNumber].macro_values[i] << 5;
+							channel->pan_send &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 8));
+							channel->pan_send |= macro_value << 5;
 							break;
 						case MACRO_INPUTLEVEL:
-							m68k_com->chnCtrl[chnNumber].input_sel &= (0xFFFF << 3);
-							m68k_com->chnCtrl[chnNumber].input_sel |= m68k_com->chnCtrl[chnNumber].macro_values[i];
+							channel->input_sel &= (0xFFFF << 3);
+							channel->input_sel |= macro_value;
 							break;
 						case MACRO_PAN:
-							value_buffer = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
+							value_buffer = (short)macro_value;
 							if (value_buffer > 0)
 								value_buffer += 0x10;
 							else
 								value_buffer *= -1;
-							m68k_com->chnCtrl[chnNumber].pan_send &= ((0xFFFF >> (16 - 8)) | (0xFFFF << 13));
-							m68k_com->chnCtrl[chnNumber].pan_send |= ((unsigned short)value_buffer) << 8;
+							channel->pan_send &= ((0xFFFF >> (16 - 8)) | (0xFFFF << 13));
+							channel->pan_send |= ((unsigned short)value_buffer) << 8;
 							break;
 						case MACRO_NOTEOFFSET:
-							note_offset = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
-							if (mcr_is_fixed(mcrNumber)) {
+							note_offset = (short)macro_value;
+							if (mcr_is_fixed(macro)) {
 								note = 0;
 							}
 							break;
 						case MACRO_CENTDETUNE:
-							cent = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
+							cent = (short)macro_value;
 							break;
 						case MACRO_REGISTERDETUNE:
-							reg_detune = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
+							reg_detune = (short)macro_value;
 							break;
 						case MACRO_PITCHMULTIPLIER:
-							freq_mul = (short)m68k_com->chnCtrl[chnNumber].macro_values[i] + 1;
+							freq_mul = (short)macro_value + 1;
 							break;
 						case MACRO_PITCHDIVIDER:
-							freq_div = (short)m68k_com->chnCtrl[chnNumber].macro_values[i] + 1;
+							freq_div = (short)macro_value + 1;
 							break;
 						case MACRO_MODINPUTX:
-							m68k_com->chnCtrl[chnNumber].FM_data &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 12));
-							m68k_com->chnCtrl[chnNumber].FM_data |= ((unsigned short)(m68k_com->chnCtrl[chnNumber].macro_values[i] + 0x10)) << 5;
+							channel->FM_data &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 12));
+							channel->FM_data |= ((unsigned short)(macro_value + 0x10)) << 5;
 							break;
 						case MACRO_MODINPUTY:
-							m68k_com->chnCtrl[chnNumber].FM_data &= (0xFFFF << 6);
-							m68k_com->chnCtrl[chnNumber].FM_data |= ((unsigned short)(m68k_com->chnCtrl[chnNumber].macro_values[i] + 0x10));
+							channel->FM_data &= (0xFFFF << 6);
+							channel->FM_data |= ((unsigned short)(macro_value + 0x10));
 							break;
 						case MACRO_EFFECTPAN:
-							value_buffer = (short)m68k_com->chnCtrl[chnNumber].macro_values[i];
+							value_buffer = (short)macro_value;
 							if (value_buffer > 0)
 								value_buffer += 0x10;
 							else
 								value_buffer *= -1;
-							m68k_com->chnCtrl[chnNumber].pan_send &= (0xFFFF << 5);
-							m68k_com->chnCtrl[chnNumber].pan_send |= ((unsigned short)value_buffer);
+							channel->pan_send &= (0xFFFF << 5);
+							channel->pan_send |= ((unsigned short)value_buffer);
 							break;
 						}
 					}
@@ -1389,21 +1339,21 @@ void	chn_set_values(short chnNumber) {
 
 	//jo_set_default_background_color(JO_COLOR_DarkGreen);
 
-	int address = (pcmCtrl[pcmNumber].hiAddrBits << 16) | pcmCtrl[pcmNumber].loAddrBits;
-	unsigned short loop = pcmCtrl[pcmNumber].LSA;
-	unsigned short playsize = pcmCtrl[pcmNumber].max_playsize;
+	int address = (sample->hiAddrBits << 16) | sample->loAddrBits;
+	unsigned short loop = sample->LSA;
+	unsigned short playsize = sample->max_playsize;
 
 	if (sample_offset != 0 || loopstart_offset != 0 || loopend_offset != 0) {
 		int start_offset = sample_offset;
-		start_offset += pcmCtrl[pcmNumber].sample_start;
-		playsize = pcmCtrl[pcmNumber].playsize;
+		start_offset += sample->sample_start;
+		playsize = sample->playsize;
 
-		if (start_offset > (int)pcmCtrl[pcmNumber].max_playsize) {
-			start_offset = pcmCtrl[pcmNumber].max_playsize;
+		if (start_offset > (int)sample->max_playsize) {
+			start_offset = sample->max_playsize;
 		}
 		address += start_offset;
 
-		int new_loopstart = (int)loopstart_offset + (int)pcmCtrl[pcmNumber].LSA;
+		int new_loopstart = (int)loopstart_offset + (int)sample->LSA;
 		int new_max_size = pcm_get_max_playsize(pcmNumber) - start_offset + 1;
 		if (new_loopstart > new_max_size) {
 			new_loopstart = new_max_size;
@@ -1420,20 +1370,20 @@ void	chn_set_values(short chnNumber) {
 		playsize = (unsigned short)new_loopend;
 	}
 
-	m68k_com->chnCtrl[chnNumber].key_data |= (address >> 16);
-	m68k_com->chnCtrl[chnNumber].start_addr = (unsigned short)address;
-	m68k_com->chnCtrl[chnNumber].LSA = loop;
-	m68k_com->chnCtrl[chnNumber].playsize = playsize;
+	channel->key_data |= (address >> 16);
+	channel->start_addr = (unsigned short)address;
+	channel->LSA = loop;
+	channel->playsize = playsize;
 
 	//jo_set_default_background_color(JO_COLOR_DarkYellow);
 
-	chn_set_final_pitch(chnNumber, note, note_offset, cent, freq_mul, freq_div, reg_detune);
+	chn_set_final_pitch(channel, instrument, sample, note, note_offset, cent, freq_mul, freq_div, reg_detune);
 
 	//jo_set_default_background_color(JO_COLOR_DarkRed);
 
-	chn_set_final_level(chnNumber, level, scaling);
+	chn_set_final_level(channel, patch_leader_channel, instrument, level, scaling);
 
-	//jo_set_default_background_color(JO_COLOR_Black);
+	//jo_set_default_background_color(JO_COLOR_DarkGray);
 }
 #pragma GCC pop_options
 
@@ -1640,14 +1590,8 @@ unsigned short	calculate_bytes_per_blank(int sampleRate, Bool is8Bit, Bool isPAL
 	return bytes_per_blank;
 }
 
-unsigned short calculate_bytes_per_blank_with_pitchword(short pcmNumber) {
-	return calculate_bytes_per_blank(convert_pitchword_to_bitrate(pcmCtrl[pcmNumber].base_note),
-		pcmCtrl[pcmNumber].bitDepth, PCM_SYS_REGION);
-}
-
-unsigned short calculate_bytes_per_blank_with_final_pitch(short chnNumber) {
-	return calculate_bytes_per_blank(convert_pitchword_to_bitrate(m68k_com->chnCtrl[chnNumber].final_pitch),
-		pcmCtrl[insCtrl[m68k_com->chnCtrl[chnNumber].instrumentID].sampleID].bitDepth, PCM_SYS_REGION);
+unsigned short calculate_bytes_per_blank_with_pitchword(short pitchword, unsigned char bitDepth) {
+	return calculate_bytes_per_blank(convert_pitchword_to_bitrate(pitchword), bitDepth, PCM_SYS_REGION);
 }
 
 int			convert_pitchword_to_bitrate(short pitchWord)

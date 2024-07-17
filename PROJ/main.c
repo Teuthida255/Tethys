@@ -83,7 +83,7 @@ void lead_function(void) // Link start to main
 #define PCM_TYPE_8BIT  (1) // 8-bit
 #define PCM_TYPE_16BIT (0) // 16-bit
 
-#define INS_MACROS_MAX 8
+#define INS_MACROS_MAX 4
 
 #define NUM_COEFFICIENTS 63
 #define NUM_ADDRESSES 32

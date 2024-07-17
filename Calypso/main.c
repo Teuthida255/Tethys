@@ -4,6 +4,8 @@
 #include "keyboard_funcs.h"
 #include "samples.h"
 
+#define CALYPSO_DEBUG 0
+
 #define PAN_LEFT_START 16
 #define MAX_PAN_VALUE 15
 
@@ -663,7 +665,7 @@ short inst_option_defaults[NUM_INST_OPTIONS] = {
 	0,			// INST_INVERT
 	0,			// INST_NOISE_ONLY
 	16,			// INST_LEVEL
-	5,			// INST_VOLUME
+	4,			// INST_VOLUME
 	0,			// INST_PAN
 	0,	        // INST_SEMITONE
 	0,			// INST_CENT
@@ -700,10 +702,10 @@ short inst_option_defaults[NUM_INST_OPTIONS] = {
 	0,
 	0,
 	0,
-	0,
-	0,
-	0,
-	0,
+	//0, in the cringe corner until I'm a better programmer
+	//0,
+	//0,
+	//0,
 };
 
 short chan_option_defaults[NUM_INST_OPTIONS] = {
@@ -2073,23 +2075,35 @@ void			my_draw(void)
 		if (current_page < getNumPages(editor)) {
 			jo_printf_with_color(19, 25, JO_COLOR_INDEX_White, "v Next...");
 		}
-		jo_clear_screen_line(27);
-		jo_printf_with_color(1, 27, JO_COLOR_INDEX_White, "Sample bytes remaining: %d", 0x7F800 - (int)scsp_load);
+		if (!CALYPSO_DEBUG) {
+			jo_clear_screen_line(27);
+			jo_printf_with_color(1, 27, JO_COLOR_INDEX_White, "Sample bytes remaining: %d", 0x7F800 - (int)scsp_load);
 
-		jo_clear_screen_line(28);
-		if (using_keyboard)
-			jo_printf_with_color(10, 28, JO_COLOR_INDEX_Purple, " Press ESC for help ");
-		else
-			jo_printf_with_color(10, 28, JO_COLOR_INDEX_Purple, "Press START for help");
-		/* Simple debug info*/
-		//jo_printf_with_color(0, 28, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_func(0), test_func(1), test_func(2), test_func(3));
-		jo_clear_screen_line(29);
-		//jo_printf_with_color(0, 29, JO_COLOR_INDEX_White, "04: %4x  AD: %4x  :))))))", test_func(instruments[4]), test_func(adx4snd));
+			jo_clear_screen_line(28);
+			if (using_keyboard)
+				jo_printf_with_color(10, 28, JO_COLOR_INDEX_Purple, " Press ESC for help ");
+			else
+				jo_printf_with_color(10, 28, JO_COLOR_INDEX_Purple, "Press START for help");
+			jo_clear_screen_line(29);
+			jo_clear_screen_line(30);
+		}
+		else {
+			/* Simple debug info*/
+			jo_clear_screen_line(26);
+			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_func(0), test_func(1), test_func(2), test_func(3));
+			jo_clear_screen_line(27);
+			//jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "04: %4x  05: %4x  06: %4x  07: %4x", test_func(4), test_func(5), test_func(6), test_func(7));
+			jo_clear_screen_line(28);
+			//jo_printf_with_color(0, 28, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
+			jo_clear_screen_line(29);
+			//jo_printf_with_color(0, 29, JO_COLOR_INDEX_White, "0C: %4x  0D: %4x  0E: %4x  0F: %4x", test_func(12), test_func(13), test_func(14), test_func(15));
+		}
 
 		write_option_values_and_update();
 		should_write = false;
 		should_set_pcm = false;
 		did_offset = false;
+		jo_set_default_background_color(JO_COLOR_Black);
 
 		
 	}
