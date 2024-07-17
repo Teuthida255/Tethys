@@ -5,8 +5,7 @@
 #include <sl_def.h> //Mostly to link us with SBL file system
 #include "pcmsys.h"
 #include <SEGA_GFS.H>
-#define true	(1)
-#define false	(0)
+#include <jo/jo.h>
 
 static const int logtbl[] = {
 	/* 0 */		0,
@@ -125,124 +124,124 @@ static short adx_coef_tbl[8][2] =
 	{ADX_1920_COEF_1, ADX_1920_COEF_2}
 };
 
-static const float semitone_mults[13] = {
-	1.0,
-	1.059463094,
-	1.122462048,
-	1.189207115,
-	1.25992105,
-	1.334839854,
-	1.414213562,
-	1.498307077,
-	1.587401052,
-	1.681792831,
-	1.781797436,
-	1.887748625,
-	2.0
+static const jo_fixed semitone_mults[13] = {
+	0x10000,
+	0x10F38,
+	0x11F59,
+	0x1306F,
+	0x1428A,
+	0x155B8,
+	0x16A09,
+	0x17F91,
+	0x1965F,
+	0x1AE89,
+	0x1C823,
+	0x1E343,
+	0x20000,
 };
 
-static const float cent_mults[101] = {
-	1.0,
-	1.00057779,
-	1.001155913,
-	1.00173437,
-	1.002313162,
-	1.002892288,
-	1.003471749,
-	1.004051544,
-	1.004631674,
-	1.00521214,
-	1.005792941,
-	1.006374078,
-	1.00695555,
-	1.007537358,
-	1.008119503,
-	1.008701984,
-	1.009284801,
-	1.009867955,
-	1.010451446,
-	1.011035275,
-	1.01161944,
-	1.012203943,
-	1.012788784,
-	1.013373963,
-	1.01395948,
-	1.014545335,
-	1.015131529,
-	1.015718061,
-	1.016304932,
-	1.016892142,
-	1.017479692,
-	1.018067581,
-	1.01865581,
-	1.019244379,
-	1.019833287,
-	1.020422536,
-	1.021012126,
-	1.021602056,
-	1.022192327,
-	1.022782939,
-	1.023373892,
-	1.023965187,
-	1.024556823,
-	1.025148801,
-	1.025741121,
-	1.026333784,
-	1.026926789,
-	1.027520136,
-	1.028113827,
-	1.02870786,
-	1.029302237,
-	1.029896957,
-	1.03049202,
-	1.031087428,
-	1.031683179,
-	1.032279275,
-	1.032875715,
-	1.0334725,
-	1.034069629,
-	1.034667104,
-	1.035264924,
-	1.035863089,
-	1.0364616,
-	1.037060457,
-	1.037659659,
-	1.038259208,
-	1.038859103,
-	1.039459345,
-	1.040059934,
-	1.04066087,
-	1.041262153,
-	1.041863783,
-	1.042465761,
-	1.043068087,
-	1.04367076,
-	1.044273782,
-	1.044877153,
-	1.045480872,
-	1.04608494,
-	1.046689357,
-	1.047294123,
-	1.047899238,
-	1.048504704,
-	1.049110519,
-	1.049716684,
-	1.050323199,
-	1.050930065,
-	1.051537281,
-	1.052144848,
-	1.052752766,
-	1.053361036,
-	1.053969657,
-	1.05457863,
-	1.055187954,
-	1.055797631,
-	1.056407659,
-	1.057018041,
-	1.057628774,
-	1.058239861,
-	1.058851301,
-	1.059463094
+static const jo_fixed cent_mults[101] = {
+	0x10000,
+	0x10025,
+	0x1004B,
+	0x10071,
+	0x10097,
+	0x100BD,
+	0x100E3,
+	0x10109,
+	0x1012F,
+	0x10155,
+	0x1017B,
+	0x101A1,
+	0x101C7,
+	0x101ED,
+	0x10214,
+	0x1023A,
+	0x10260,
+	0x10286,
+	0x102AC,
+	0x102D3,
+	0x102F9,
+	0x1031F,
+	0x10346,
+	0x1036C,
+	0x10392,
+	0x103B9,
+	0x103DF,
+	0x10406,
+	0x1042C,
+	0x10453,
+	0x10479,
+	0x104A0,
+	0x104C6,
+	0x104ED,
+	0x10513,
+	0x1053A,
+	0x10561,
+	0x10587,
+	0x105AE,
+	0x105D5,
+	0x105FB,
+	0x10622,
+	0x10649,
+	0x10670,
+	0x10696,
+	0x106BD,
+	0x106E4,
+	0x1070B,
+	0x10732,
+	0x10759,
+	0x10780,
+	0x107A7,
+	0x107CE,
+	0x107F5,
+	0x1081C,
+	0x10843,
+	0x1086A,
+	0x10891,
+	0x108B8,
+	0x108DF,
+	0x10907,
+	0x1092E,
+	0x10955,
+	0x1097C,
+	0x109A4,
+	0x109CB,
+	0x109F2,
+	0x10A1A,
+	0x10A41,
+	0x10A68,
+	0x10A90,
+	0x10AB8,
+	0x10ADF,
+	0x10B06,
+	0x10B2E,
+	0x10B55,
+	0x10B7D,
+	0x10BA4,
+	0x10BCC,
+	0x10BF3,
+	0x10C1B,
+	0x10C43,
+	0x10C6A,
+	0x10C92,
+	0x10CBA,
+	0x10CE1,
+	0x10D09,
+	0x10D31,
+	0x10D59,
+	0x10D81,
+	0x10DA9,
+	0x10DD0,
+	0x10DF8,
+	0x10E20,
+	0x10E48,
+	0x10E70,
+	0x10E98,
+	0x10EC0,
+	0x10EE8,
+	0x10F10,
+	0x10F38,
 };
 
 // MVOL is a 4-bit number; values 0-15 are valid.
@@ -877,6 +876,7 @@ unsigned short	get_initial_macro_value(unsigned char type, short insNumber) {
 #pragma GCC push_options
 #pragma GCC optimize("O3")
 void	chn_set_macro_values(short chnNumber) {
+	//jo_set_default_background_color(JO_COLOR_DarkPurple);
 	if (chnNumber < 0) return;
 	short insNumber = chn_get_current_instrument(chnNumber);
 	short patchLeaderChnNumber = chnNumber;
@@ -1023,77 +1023,90 @@ void	chn_set_final_pitch(short chnNumber, short note, short note_offset, short c
 	short pcmNumber = ins_get_current_sample(insNumber, note);
 	short semitone = note_offset + ((insCtrl[insNumber].use_multi != 0 && mlt_is_base_note_override(insCtrl[insNumber].sampleID) ? 0 : (char)note)) - ((char)(pcmCtrl[pcmNumber].base_note));
 	short pitch_as_short;
-	float pitch = (float)(pcmCtrl[pcmNumber].base_pitch & MAX_PITCH);
+	jo_fixed pitch = jo_int2fixed(pcmCtrl[pcmNumber].base_pitch & MAX_PITCH);
 	signed char octave = (pcmCtrl[pcmNumber].base_pitch >> 11);
 
 	if (octave >= OCTAVE_MIDPOINT)
 		octave -= OCTAVE_SIZE;
 
-	pitch += MAX_PITCH_SIZE;
+	pitch += jo_int2fixed(MAX_PITCH_SIZE);
 
 	if (cent > 0) {
-		pitch *= cent_mults[cent];
+		pitch = jo_fixed_mult(pitch, cent_mults[cent]);
 	}
 	else if (cent < 0) {
 		semitone--;
-		pitch *= cent_mults[100 - (-cent)];
+		pitch = jo_fixed_mult(pitch, cent_mults[100 - (-cent)]);
 	}
 
 	if (semitone != 0) {
 		octave += semitone / 12;
 		if (semitone > 0) {
-			pitch *= semitone_mults[semitone % SEMITONES_PER_OCT];
+			pitch = jo_fixed_mult(pitch, semitone_mults[semitone % SEMITONES_PER_OCT]);
 		}
 		else if (semitone < 0) {
 			octave--;
-			pitch *= semitone_mults[SEMITONES_PER_OCT - ((-semitone) % SEMITONES_PER_OCT)];
+			pitch = jo_fixed_mult(pitch, semitone_mults[SEMITONES_PER_OCT - ((-semitone) % SEMITONES_PER_OCT)]);
 		}
 	}
 
-	if (freq_mul != freq_div) {		
-			pitch *= freq_mul;
-			pitch /= freq_div;
+	if (freq_mul != freq_div) {	
+		jo_fixed freq_ratio = jo_fixed_div(jo_int2fixed(freq_mul), jo_int2fixed(freq_div));
+		// jo_fixed can only hold 16 bits of integer, and the maximum size of pitch by here is slightly less than 0xFFF
+		if (freq_ratio >= jo_int2fixed(16)) {
+			octave += 4;
+			freq_ratio = JO_DIV_BY_16(freq_ratio);
+		}
+		pitch = jo_fixed_mult(pitch, freq_ratio);
 	}
 
-	pitch -= MAX_PITCH_SIZE;
-	if (pitch < 0) {
-		pitch *= 2;
-		octave--;
-		while (pitch < -MAX_PITCH_SIZE) {
-			pitch += MAX_PITCH_SIZE;
-			pitch *= 2;
-			octave--;
-		}
-		pitch += MAX_PITCH_SIZE;
-	}
-	else {
-		while (pitch >= MAX_PITCH_SIZE) {
-			pitch -= MAX_PITCH_SIZE;
-			pitch /= 2;
-			octave++;
-		}
-	}
-
-	pitch_as_short = (short)pitch;
-	if (reg_detune != 0) {
-		pitch_as_short += reg_detune;
-		if (pitch_as_short >= 0) {
-			octave += pitch_as_short / MAX_PITCH_SIZE;
-			pitch_as_short %= MAX_PITCH_SIZE;
-		}
-		else {
-			octave += pitch_as_short / MAX_PITCH_SIZE - 1;
-			pitch_as_short = MAX_PITCH_SIZE - (-pitch_as_short % MAX_PITCH_SIZE);
-		}
-	}
-
-	if (octave > MAX_OCTAVE) {
+	if (pitch == (jo_fixed)JO_FIXED_OVERFLOW) {
 		octave = MAX_OCTAVE;
 		pitch_as_short = MAX_PITCH;
 	}
-	else if (octave < MIN_OCTAVE) {
-		octave = MIN_OCTAVE;
-		pitch_as_short = 0;
+	else {
+		const jo_fixed fixed_max_pitch = jo_int2fixed(MAX_PITCH_SIZE);
+		pitch -= fixed_max_pitch;
+
+		if (pitch < 0) {
+			pitch = JO_MULT_BY_2(pitch);
+			octave--;
+			while (pitch < -fixed_max_pitch) {
+				pitch += fixed_max_pitch;
+				pitch = JO_MULT_BY_2(pitch);
+				octave--;
+			}
+			pitch += fixed_max_pitch;
+		}
+		else {
+			while (pitch >= fixed_max_pitch) {
+				pitch -= fixed_max_pitch;
+				pitch = JO_DIV_BY_2(pitch);
+				octave++;
+			}
+		}
+
+		pitch_as_short = jo_fixed2int(pitch);
+		if (reg_detune != 0) {
+			pitch_as_short += reg_detune;
+			if (pitch_as_short >= 0) {
+				octave += pitch_as_short / MAX_PITCH_SIZE;
+				pitch_as_short %= MAX_PITCH_SIZE;
+			}
+			else {
+				octave += pitch_as_short / MAX_PITCH_SIZE - 1;
+				pitch_as_short = MAX_PITCH_SIZE - (-pitch_as_short % MAX_PITCH_SIZE);
+			}
+		}
+
+		if (octave > MAX_OCTAVE) {
+			octave = MAX_OCTAVE;
+			pitch_as_short = MAX_PITCH;
+		}
+		else if (octave < MIN_OCTAVE) {
+			octave = MIN_OCTAVE;
+			pitch_as_short = 0;
+		}
 	}
 
 	if (octave < 0) 
@@ -1139,6 +1152,7 @@ void	chn_set_final_level(short chnNumber, short level, unsigned char scaling) {
 }
 
 void	chn_set_values(short chnNumber) {
+	//jo_set_default_background_color(JO_COLOR_DarkBlue);
 	if (chnNumber < 0) return;
 	short insNumber = chn_get_current_instrument(chnNumber);
 	short patchLeaderChnNumber = chnNumber;
@@ -1185,6 +1199,8 @@ void	chn_set_values(short chnNumber) {
 
 	m68k_com->chnCtrl[chnNumber].decompression_size = pcmCtrl[pcmNumber].decompression_size;
 
+	//jo_set_default_background_color(JO_COLOR_DarkCyan);
+
 	unsigned short sample_offset = insCtrl[insNumber].sample_offset;
 	unsigned short loopstart_offset = insCtrl[insNumber].loopstart_offset;
 	unsigned short loopend_offset = insCtrl[insNumber].loopend_offset;
@@ -1199,7 +1215,6 @@ void	chn_set_values(short chnNumber) {
 	short freq_mul = (insCtrl[insNumber].freq_ratio & 0xFF) + 1;
 	short freq_div = (insCtrl[insNumber].freq_ratio >> 8) + 1;
 
-	m68k_com->chnCtrl[chnNumber].test_area = 0;
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
 		short mcrNumber = insCtrl[insNumber].macros[i];
 		short mcrChnNumber = chnNumber;
@@ -1372,7 +1387,7 @@ void	chn_set_values(short chnNumber) {
 		}
 	}
 
-	m68k_com->chnCtrl[chnNumber].test_area = level;
+	//jo_set_default_background_color(JO_COLOR_DarkGreen);
 
 	int address = (pcmCtrl[pcmNumber].hiAddrBits << 16) | pcmCtrl[pcmNumber].loAddrBits;
 	unsigned short loop = pcmCtrl[pcmNumber].LSA;
@@ -1410,9 +1425,15 @@ void	chn_set_values(short chnNumber) {
 	m68k_com->chnCtrl[chnNumber].LSA = loop;
 	m68k_com->chnCtrl[chnNumber].playsize = playsize;
 
+	//jo_set_default_background_color(JO_COLOR_DarkYellow);
+
 	chn_set_final_pitch(chnNumber, note, note_offset, cent, freq_mul, freq_div, reg_detune);
 
+	//jo_set_default_background_color(JO_COLOR_DarkRed);
+
 	chn_set_final_level(chnNumber, level, scaling);
+
+	//jo_set_default_background_color(JO_COLOR_Black);
 }
 #pragma GCC pop_options
 

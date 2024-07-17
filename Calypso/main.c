@@ -13,7 +13,7 @@ int framerate;
 #define NUM_MULTIS (NUM_SAMPLES)
 #define NUM_MACROS (63)
 #define NUM_INSTRUMENTS (64)
-#define NUM_CHANNELS 16
+#define NUM_CHANNELS 32
 #define NUM_EDITORS 5
 
 #define NUM_PCM_OPTIONS 6
@@ -1183,23 +1183,16 @@ short getNumPages(option_page* option) {
 }
 
 void update_engine_state(void) {
-	/* Commented lines are profiling tools
-	   enable them to lower your opinion of me*/
-	//jo_set_default_background_color(JO_COLOR_DarkPurple);
 	dsp_load_base_variables();
 	for (short i = 0; i < NUM_CHANNELS; i++) {
 		short* current_options = option_values[EDITOR_CHAN][i];
 		short* velocity_options = option_values[EDITOR_CHAN][0];
-		//jo_set_default_background_color(JO_COLOR_DarkBlue);
 		chn_note_change(i, (unsigned char)current_options[CHAN_NOTE]);
 		chn_velocity_change(i, (unsigned char)velocity_options[CHAN_VELOCITY]);
 		chn_channel_volume_change(i, (unsigned char)velocity_options[CHAN_VOLUME]);
-			//jo_set_default_background_color(JO_COLOR_DarkGreen);
 		chn_set_macro_values(i);
-		//jo_set_default_background_color(JO_COLOR_DarkYellow);
 		chn_set_values(i);
 	}
-	//jo_set_default_background_color(JO_COLOR_DarkGray);
 	dsp_set_variables();
 }
 
@@ -2089,7 +2082,7 @@ void			my_draw(void)
 		else
 			jo_printf_with_color(10, 28, JO_COLOR_INDEX_Purple, "Press START for help");
 		/* Simple debug info*/
-		//jo_printf_with_color(0, 28, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_inst(0), test_inst(1), test_inst(2), test_inst(3));
+		//jo_printf_with_color(0, 28, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_func(0), test_func(1), test_func(2), test_func(3));
 		jo_clear_screen_line(29);
 		//jo_printf_with_color(0, 29, JO_COLOR_INDEX_White, "04: %4x  AD: %4x  :))))))", test_func(instruments[4]), test_func(adx4snd));
 
