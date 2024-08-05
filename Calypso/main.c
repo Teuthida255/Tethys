@@ -762,6 +762,18 @@ void init_option_values() {
 		option_values[EDITOR_MULT][1][MULT_DATA + 3] = 36;  // D#0
 		option_values[EDITOR_MULT][1][MULT_DATA + 4] = 14;  // E-0
 	}
+
+	if (CALYPSO_DEBUG) {
+		option_values[EDITOR_INST][0][INST_PATCHLENGTH] = 0;
+		option_values[EDITOR_INST][0][INST_SAMPLE] = 0;
+		option_values[EDITOR_INST][1][INST_SAMPLE] = 1;
+		option_values[EDITOR_INST][2][INST_SAMPLE] = 2;
+		option_values[EDITOR_INST][3][INST_SAMPLE] = 3;
+		option_values[EDITOR_INST][4][INST_SAMPLE] = 4;
+		option_values[EDITOR_INST][5][INST_SAMPLE] = 5;
+		option_values[EDITOR_INST][6][INST_SAMPLE] = 6;
+		option_values[EDITOR_INST][7][INST_SAMPLE] = 7;
+	}
 }
 
 bool pan_is_right(char pan) {
@@ -1218,8 +1230,8 @@ const edit_option sample_options[NUM_PCM_OPTIONS] = {
 
 const edit_option sample_option = { "Sample", 4, 0, NUM_SAMPLES, DISP_SELECTOR };
 
-const edit_option multi_samp = { "   Sample ID", 4, 0, NUM_SAMPLES, DISP_MULTIDATA };
-const edit_option multi_splt = { "         Sample ID", 4, 0, NUM_SAMPLES, DISP_UNSIGNEDHEX };
+const edit_option multi_samp = { "   Sample ID", 4, 0, NUM_SAMPLES - 1, DISP_MULTIDATA };
+const edit_option multi_splt = { "         Sample ID", 4, 0, NUM_SAMPLES - 1, DISP_UNSIGNEDHEX };
 const edit_option multi_note = { "       Cutoff Note", 12, 0, 95, DISP_NOTE };
 const edit_option ph = { "", 0, 0, 0, 0 };
 
@@ -1236,7 +1248,7 @@ short multi_conversion_buffer[NUM_MULT_OPTIONS];
 const edit_option multi_option = { "Multi-Sample", 4, 0, NUM_MULTIS, DISP_SELECTOR };
 
 const edit_option options[NUM_INST_OPTIONS - INS_MACROS_MAX + 1] = {
-	{"   Sample/Multi ID", 4, 0, NUM_SAMPLES, DISP_UNSIGNEDHEX},
+	{"   Sample/Multi ID", 4, 0, NUM_SAMPLES - 1, DISP_UNSIGNEDHEX},
 	{"  Use Multi-Sample", 1, 0, 1, DISP_ONOFF},
 	{"     Sample Offset", 0x100, 0, 0xFFFF, DISP_UNSIGNEDHEX},
 	{" Loop Start Offset", 0x100, 0, 0xFFFF, DISP_UNSIGNEDHEX},
@@ -1468,7 +1480,6 @@ void write_option_values_and_update(void) {
 			}
 		}
 		
-		
 		// Testing samples uses the default instrument (instrument 0)
 		short insNumber = (current_editor >= EDITOR_INST) ? instruments[instrument_editor.current_selector - patch_offset] : 0;
 		short patchlength = (play_single) ? 0 : ins_get_patchlength(insNumber);
@@ -1514,7 +1525,6 @@ void write_option_values_and_update(void) {
 		}
 	}
 	update_engine_state();
-	//jo_set_default_background_color(JO_COLOR_Black);
 	write_all_values = false;
 }
 
@@ -1581,6 +1591,8 @@ void			my_draw(void)
 	if (jo_is_input_key_down(0, JO_KEY_START)) {
 		show_info_page = !show_info_page;
 	}
+
+	chn_remove_melodic_flags();
 
 	if (show_info_page) {
 		chn_cease_all();
@@ -1667,6 +1679,7 @@ void			my_draw(void)
 				move_down = false;
 				instrument_left = false;
 				instrument_right = false;
+				should_write = true;
 			}
 
 			if (jo_is_input_key_down(0, JO_KEY_A)) {
@@ -1702,6 +1715,7 @@ void			my_draw(void)
 				}
 				if (new_editor != current_editor) {
 					current_editor = new_editor;
+					should_write = true;
 				}
 
 				move_left = false;
@@ -1787,17 +1801,17 @@ void			my_draw(void)
 		else if (while_pressed)
 			highlight_color = JO_COLOR_INDEX_Red;
 
-		for (short i = 0; i <= 0; i++) {
+		for (short i = 0; i <= 1; i++) {
 			jo_clear_screen_line(i);
 		}
-		jo_clear_screen_line(1);
+		jo_clear_screen_line(2);
 		if (play_single) {
-			jo_printf_with_color(1, 1, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Single Slot");
+			jo_printf_with_color(1, 2, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Single Slot");
 		}
 		else {
-			jo_printf_with_color(1, 1, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Whole Patch");
+			jo_printf_with_color(1, 2, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Whole Patch");
 		}
-		jo_clear_screen_line(2);
+		jo_clear_screen_line(3);
 		
 		bool is_playing = false;
 		static const char* editor_names[] = {
@@ -1811,28 +1825,28 @@ void			my_draw(void)
 			}
 		}
 		if (!is_playing) {
-			jo_printf_with_color(1, 2, JO_COLOR_INDEX_White, "State: Stopped");
+			jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Stopped");
 		}
 		else if (current_editor < EDITOR_INST) {
-			jo_printf_with_color(1, 2, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[current_editor], editor->current_selector);
+			jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[current_editor], editor->current_selector);
 		}
 		else {
-			if (m68k_com->chnCtrl[0].instrumentID == instrument_editor.current_selector && option_values[EDITOR_INST][instrument_editor.current_selector][INST_PATCHLENGTH] == 0) {
-				jo_printf_with_color(1, 2, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[EDITOR_INST], instrument_editor.current_selector);
+			if (chnCtrl[0].instrumentID == instrument_editor.current_selector && option_values[EDITOR_INST][instrument_editor.current_selector][INST_PATCHLENGTH] == 0) {
+				jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[EDITOR_INST], instrument_editor.current_selector);
 			}
 			else {
-				jo_printf_with_color(1, 2, JO_COLOR_INDEX_White, "State: Playing Patch %d", m68k_com->chnCtrl[0].instrumentID);
+				jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing Patch %d", chnCtrl[0].instrumentID);
 			}
 		}
 		
-		for (short i = 3; i <= 5; i++) {
+		for (short i = 4; i <= 6; i++) {
 			jo_clear_screen_line(i);
 		}
 
-		if (using_keyboard) print_option(2, 4, highlight_color, true, &octave_option, octave, 0, 0);
-		if (current_editor != EDITOR_CHAN) print_option(2, 5, highlight_color, true, selector, editor->current_selector, 0, 0);
+		if (using_keyboard) print_option(2, 5, highlight_color, true, &octave_option, octave, 0, 0);
+		if (current_editor != EDITOR_CHAN) print_option(2, 6, highlight_color, true, selector, editor->current_selector, 0, 0);
 			
-		for (short i = 6; i <= 9; i++) {
+		for (short i = 7; i <= 9; i++) {
 			jo_clear_screen_line(i);
 		}
 		short current_page = (editor->current_option / OPTIONS_PER_PAGE);
@@ -2092,7 +2106,7 @@ void			my_draw(void)
 			jo_clear_screen_line(26);
 			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_func(0), test_func(1), test_func(2), test_func(3));
 			jo_clear_screen_line(27);
-			//jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "04: %4x  05: %4x  06: %4x  07: %4x", test_func(4), test_func(5), test_func(6), test_func(7));
+			jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
 			jo_clear_screen_line(28);
 			//jo_printf_with_color(0, 28, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
 			jo_clear_screen_line(29);

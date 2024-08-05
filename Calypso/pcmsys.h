@@ -382,7 +382,6 @@ typedef struct {
 	volatile unsigned char cdda_right_channel_vol_pan; // Redbook right channel volume & pan.
 	volatile short coefficients[NUM_COEFFICIENTS]; // DSP Coefficients
 	volatile short addresses[NUM_ADDRESSES];  // DSP Addresses
-
 } sysComPara;
 
 // Unused by this driver
@@ -404,6 +403,7 @@ typedef struct {
 
 //
 extern	sysComPara* m68k_com;
+extern _CHN_CTRL chnCtrl[CHN_CTRL_MAX];
 extern _INS_CTRL insCtrl[INS_CTRL_MAX];
 extern _PCM_CTRL pcmCtrl[PCM_CTRL_MAX];
 extern _MLT_CTRL mltCtrl[MLT_CTRL_MAX];
@@ -585,6 +585,7 @@ void	chn_instrument_change(short chnNumber, short instrument);
 void	chn_reset_lfo(short chnNumber);
 void	chn_set_lfo(short chnNumber);
 void	chn_set_melodic_data(short chnNumber, char slot);
+void	chn_remove_melodic_flags(void);
 void	chn_note_change(short chnNumber, unsigned char note);
 void	chn_velocity_change(short chnNumber, unsigned char velocity);
 void	chn_channel_volume_change(short chnNumber, unsigned char volume);

@@ -578,17 +578,18 @@ void driver_stop_slot(volatile char *cst) {
 // Note: key_bit should be left_shifted into its proper place before being passed into this function
 void update_slot(volatile char cst, _CHN_CTRL* lctrl, short key_bit) {
     unsigned char lfo_bit;
-    csr[cst].keys = key_bit | lctrl->key_data;
-    csr[cst].start_addr = lctrl->start_addr;
-    csr[cst].loop_start = lctrl->LSA;
+    _ICSR* slot = (_ICSR*)(&(csr[cst]));
+    slot->keys = key_bit | lctrl->key_data;
+    slot->start_addr = lctrl->start_addr;
+    slot->loop_start = lctrl->LSA;
 
     // "-1" to correct for the SCSP's pipeline. Helps that the linked library won't have to worry.
-    csr[cst].playsize = lctrl->playsize - 1;
+    slot->playsize = lctrl->playsize - 1;
 
-    csr[cst].oct_fns = lctrl->final_pitch;
+    slot->oct_fns = lctrl->final_pitch;
 
-    csr[cst].pan_send = lctrl->pan_send;
-    csr[cst].attenuation = lctrl->attenuation;
+    slot->pan_send = lctrl->pan_send;
+    slot->attenuation = lctrl->attenuation;
     if ((lctrl->reset_bits & (1 << 1)) != 0) {
         lfo_bit = (lctrl->reset_bits >> 2) & 1;
     }
@@ -599,12 +600,12 @@ void update_slot(volatile char cst, _CHN_CTRL* lctrl, short key_bit) {
         lfo_bit = ((lfoTimers[cst] < (short)(lctrl->lfo_delay)) ? 1 : 0);
     }
 
-    csr[cst].lfo_data = lctrl->lfo_data | (lfo_bit << 15);
-    csr[cst].decay_1_2_attack = lctrl->decay_1_2_attack;
-    csr[cst].key_decay_release = lctrl->key_decay_release;
+    slot->lfo_data = lctrl->lfo_data | (lfo_bit << 15);
+    slot->decay_1_2_attack = lctrl->decay_1_2_attack;
+    slot->key_decay_release = lctrl->key_decay_release;
 
-    csr[cst].FM_data = lctrl->FM_data;
-    csr[cst].input_sel = lctrl->input_sel;
+    slot->FM_data = lctrl->FM_data;
+    slot->input_sel = lctrl->input_sel;
 
     if (lfoTimers[cst] < (short)(lctrl->lfo_delay)) {
         lfoTimers[cst]++;
@@ -1476,6 +1477,7 @@ void pcm_control_loop(void) {
         play_semi_protected_sound(loopingPCMs[l]);
       }
     }
+    sh2Com->start += 1;
   } // PCM Control Loop End
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1502,17 +1504,18 @@ void _start(void) {
   static short new_volume = 0;
   static short old_volume = 0;
   driver_data_init();
-
   while (1) {
     while (sh2Com->start != 1) {
       __asm__ volatile("nop");
     }
 
-    sh2Com->start = 0;
+    sh2Com->start = 2;
 
     // Region will run the program once for every time the SH2 commands the
     // driver to start.
     pcm_control_loop();
+
+    sh2Com->start = 0;
 
     // Update CDDA volume
     // Note that SCSP Slot 16 & 17 are hard-wired as the redbook / CDDA playback

@@ -61,6 +61,7 @@ short numberChans = 0;
 short numberInsts = 0;
 short numberPCMs = 0;
 
+_CHN_CTRL chnCtrl[CHN_CTRL_MAX];
 _INS_CTRL insCtrl[INS_CTRL_MAX];
 _PCM_CTRL pcmCtrl[PCM_CTRL_MAX];
 _MLT_CTRL mltCtrl[MLT_CTRL_MAX];
@@ -255,59 +256,66 @@ void	set_master_volume(unsigned short volume)
 void	chn_play(short chnNumber, char ctrlType, char volume)
 {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].volume = volume;
-	m68k_com->chnCtrl[chnNumber].ctrlType = ctrlType;
-	m68k_com->chnCtrl[chnNumber].sh2_permit = 1;
+	chnCtrl[chnNumber].volume = volume;
+	chnCtrl[chnNumber].ctrlType = ctrlType;
+	chnCtrl[chnNumber].sh2_permit = 1;
 	chn_soft_reset_macros(chnNumber);
 }
 
 void	chn_play_melodic(short chnNumber) {
 	if (chnNumber < 0) return;
-	if (m68k_com->chnCtrl[chnNumber].melodic_data == 0) return;
-	m68k_com->chnCtrl[chnNumber].melodic_data = m68k_com->chnCtrl[chnNumber].melodic_data | MELODIC_KEYON;
-	m68k_com->chnCtrl[chnNumber].sh2_permit = 1;
+	if (chnCtrl[chnNumber].melodic_data == 0) return;
+	chnCtrl[chnNumber].melodic_data = chnCtrl[chnNumber].melodic_data | MELODIC_KEYON;
+	chnCtrl[chnNumber].sh2_permit = 1;
 	chn_soft_reset_macros(chnNumber);
 }
 
 void	chn_instrument_change(short chnNumber, short instrument) {
 	if (chnNumber < 0) return;
-	if (m68k_com->chnCtrl[chnNumber].instrumentID == instrument) return;
-	m68k_com->chnCtrl[chnNumber].instrumentID = instrument;
-	m68k_com->chnCtrl[chnNumber].bytes_per_blank = pcmCtrl[insCtrl[instrument].sampleID].bytes_per_blank;
+	if (chnCtrl[chnNumber].instrumentID == instrument) return;
+	chnCtrl[chnNumber].instrumentID = instrument;
+	chnCtrl[chnNumber].bytes_per_blank = pcmCtrl[insCtrl[instrument].sampleID].bytes_per_blank;
 	chn_cease(chnNumber);
 	chn_hard_reset_macros(chnNumber);
 }
 
 void	chn_note_change(short chnNumber, unsigned char note) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].note = note;
+	chnCtrl[chnNumber].note = note;
 }
 
 void	chn_velocity_change(short chnNumber, unsigned char velocity) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].velocity = velocity;
+	chnCtrl[chnNumber].velocity = velocity;
 }
 
 void	chn_channel_volume_change(short chnNumber, unsigned char volume) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].channel_volume = volume;
+	chnCtrl[chnNumber].channel_volume = volume;
 }
 
 void	chn_reset_lfo(short chnNumber) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].reset_bits |= 1;
+	chnCtrl[chnNumber].reset_bits |= 1;
 }
 
 void	chn_set_lfo(short chnNumber) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].reset_bits &= 0xFE;
+	chnCtrl[chnNumber].reset_bits &= 0xFE;
 }
 
 
 void	chn_set_melodic_data(short chnNumber, char slot) {
 	if (chnNumber < 0) return;
-	m68k_com->chnCtrl[chnNumber].melodic_data = slot + 1;
-	m68k_com->chnCtrl[chnNumber].note = NOTE_INACTIVE;
+	chnCtrl[chnNumber].melodic_data = slot + 1;
+	chnCtrl[chnNumber].note = NOTE_INACTIVE;
+}
+
+
+void	chn_remove_melodic_flags(void) {
+	for (short i = 0; i < CHN_CTRL_MAX; i++) {
+		chnCtrl[i].melodic_data &= 0x3F;
+	}
 }
 
 
@@ -647,17 +655,17 @@ void	mcr_set_data(short mcrNumber, short index, unsigned short data) {
 
 short	chn_get_current_instrument(short chnNumber) {
 	if (chnNumber < 0) return 0;
-	if (m68k_com->chnCtrl[chnNumber].instrumentID < INS_CTRL_MAX) {
-		return m68k_com->chnCtrl[chnNumber].instrumentID;
+	if (chnCtrl[chnNumber].instrumentID < INS_CTRL_MAX) {
+		return chnCtrl[chnNumber].instrumentID;
 	}
-	else if (m68k_com->chnCtrl[chnNumber].instrumentID >= CHN_INHERIT_MIN && m68k_com->chnCtrl[chnNumber].instrumentID <= CHN_INHERIT_MAX) {
-		return -(m68k_com->chnCtrl[chnNumber].instrumentID - (CHN_INHERIT_MIN - 1));
+	else if (chnCtrl[chnNumber].instrumentID >= CHN_INHERIT_MIN && chnCtrl[chnNumber].instrumentID <= CHN_INHERIT_MAX) {
+		return -(chnCtrl[chnNumber].instrumentID - (CHN_INHERIT_MIN - 1));
 	}
 	return 0;
 }
 
 void	chn_hard_reset_macros(short chnNumber) {
-	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(chnCtrl[chnNumber]);
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
 		channel->macro_timers[i] = MACRO_UNINITIALIZED;
 		channel->macro_length_timers[i] = 0;
@@ -666,10 +674,10 @@ void	chn_hard_reset_macros(short chnNumber) {
 }
 
 void	chn_soft_reset_macros(short chnNumber) {
-	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(chnCtrl[chnNumber]);
 	short insNumber = chn_get_current_instrument(chnNumber);
 	if (insNumber < 0) {
-		insNumber = m68k_com->chnCtrl[chnNumber + insNumber].instrumentID - insNumber;
+		insNumber = chnCtrl[chnNumber + insNumber].instrumentID - insNumber;
 	}
 	_INS_CTRL* instrument = &(insCtrl[insNumber]);
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
@@ -833,11 +841,11 @@ void	chn_set_macro_values(short chnNumber) {
 	short patchLeaderInsNumber = insNumber;
 	if (insNumber < 0) {
 		patchLeaderChnNumber += insNumber;
-		patchLeaderInsNumber = m68k_com->chnCtrl[patchLeaderChnNumber].instrumentID;
+		patchLeaderInsNumber = chnCtrl[patchLeaderChnNumber].instrumentID;
 		insNumber = patchLeaderInsNumber - insNumber;
 	}
 
-	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(chnCtrl[chnNumber]);
 	_INS_CTRL* instrument = &(insCtrl[insNumber]);
 	_INS_CTRL* patch_leader_instrument = &(insCtrl[patchLeaderInsNumber]);
 
@@ -1094,23 +1102,35 @@ void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _I
 	}	
 }
 
+
+
 void	chn_set_values(short chnNumber) {
 	//jo_set_default_background_color(JO_COLOR_DarkBlue);
+	/*if ((short)m68k_com->start - 2 < chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkGreen);
+	}
+	else if ((short)m68k_com->start - 2 > chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkPurple);
+	}
+	else {
+		jo_set_default_background_color(JO_COLOR_DarkYellow);
+	}*/
 	if (chnNumber < 0) return;
+	chnCtrl[chnNumber].test_area = chnCtrl[chnNumber].melodic_data;
 	short insNumber = chn_get_current_instrument(chnNumber);
 	short patchLeaderChnNumber = chnNumber;
 	short patchLeaderInsNumber = insNumber;
 	if (insNumber < 0) {
 		patchLeaderChnNumber += insNumber;
-		patchLeaderInsNumber = m68k_com->chnCtrl[patchLeaderChnNumber].instrumentID;
+		patchLeaderInsNumber = chnCtrl[patchLeaderChnNumber].instrumentID;
 		insNumber = patchLeaderInsNumber - insNumber;
 	}
 
-	short pcmNumber = ins_get_current_sample(insNumber, m68k_com->chnCtrl[chnNumber].note);
+	short pcmNumber = ins_get_current_sample(insNumber, chnCtrl[chnNumber].note);
 	short loop_type = (pcmCtrl[pcmNumber].loopType >= 0) ? pcmCtrl[pcmNumber].loopType : 1;
 
-	_CHN_CTRL* channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[chnNumber]);
-	_CHN_CTRL* patch_leader_channel = (_CHN_CTRL*)&(m68k_com->chnCtrl[patchLeaderChnNumber]);
+	_CHN_CTRL* channel = (_CHN_CTRL*)&(chnCtrl[chnNumber]);
+	_CHN_CTRL* patch_leader_channel = (_CHN_CTRL*)&(chnCtrl[patchLeaderChnNumber]);
 	_INS_CTRL* instrument = &(insCtrl[insNumber]);
 	_PCM_CTRL* sample = &(pcmCtrl[pcmNumber]);
 
@@ -1148,6 +1168,15 @@ void	chn_set_values(short chnNumber) {
 	channel->decompression_size = sample->decompression_size;
 
 	//jo_set_default_background_color(JO_COLOR_DarkCyan);
+	/*if ((short)m68k_com->start - 2 < chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkGreen);
+	}
+	else if ((short)m68k_com->start - 2 > chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkPurple);
+	}
+	else {
+		jo_set_default_background_color(JO_COLOR_DarkYellow);
+	}*/
 
 	unsigned short sample_offset = instrument->sample_offset;
 	unsigned short loopstart_offset = instrument->loopstart_offset;
@@ -1156,7 +1185,7 @@ void	chn_set_values(short chnNumber) {
 	short level = instrument->totallevel;
 	unsigned char scaling = instrument->level_scaling;
 
-	short note = m68k_com->chnCtrl[patchLeaderChnNumber].note;
+	short note = chnCtrl[patchLeaderChnNumber].note;
 	short note_offset = (char)(instrument->pitch_offset & 0xFF);
 	short cent = (char)(instrument->pitch_offset >> 8);
 	short reg_detune = instrument->register_detune;
@@ -1338,74 +1367,100 @@ void	chn_set_values(short chnNumber) {
 	}
 
 	//jo_set_default_background_color(JO_COLOR_DarkGreen);
+	/*if ((short)m68k_com->start - 2 < chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkGreen);
+	}
+	else if ((short)m68k_com->start - 2 > chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkPurple);
+	}
+	else {
+		jo_set_default_background_color(JO_COLOR_DarkYellow);
+	}*/
 
 	int address = (sample->hiAddrBits << 16) | sample->loAddrBits;
 	unsigned short loop = sample->LSA;
 	unsigned short playsize = sample->max_playsize;
 
-	if (sample_offset != 0 || loopstart_offset != 0 || loopend_offset != 0) {
-		int start_offset = sample_offset;
-		start_offset += sample->sample_start;
-		playsize = sample->playsize;
+	int start_offset = sample_offset;
+	start_offset += sample->sample_start;
+	playsize = sample->playsize;
 
-		if (start_offset > (int)sample->max_playsize) {
-			start_offset = sample->max_playsize;
-		}
-		address += start_offset;
-
-		int new_loopstart = (int)loopstart_offset + (int)sample->LSA;
-		int new_max_size = pcm_get_max_playsize(pcmNumber) - start_offset + 1;
-		if (new_loopstart > new_max_size) {
-			new_loopstart = new_max_size;
-		}
-		loop = (unsigned short)new_loopstart;
-
-		int new_loopend = (int)playsize - loopend_offset;
-		if (new_loopend < new_loopstart) {
-			new_loopend = new_loopstart;
-		}
-		else if (new_loopend > new_max_size) {
-			new_loopend = new_max_size;
-		}
-		playsize = (unsigned short)new_loopend;
+	if (start_offset > (int)sample->max_playsize) {
+		start_offset = sample->max_playsize;
 	}
+	address += start_offset;
+
+	int new_loopstart = (int)loopstart_offset + (int)sample->LSA;
+	int new_max_size = pcm_get_max_playsize(pcmNumber) - start_offset + 1;
+	if (new_loopstart > new_max_size) {
+		new_loopstart = new_max_size;
+	}
+	loop = (unsigned short)new_loopstart;
+
+	int new_loopend = (int)playsize - loopend_offset;
+	if (new_loopend < new_loopstart) {
+		new_loopend = new_loopstart;
+	}
+	else if (new_loopend > new_max_size) {
+		new_loopend = new_max_size;
+	}
+	playsize = (unsigned short)new_loopend;
 
 	channel->key_data |= (address >> 16);
 	channel->start_addr = (unsigned short)address;
 	channel->LSA = loop;
 	channel->playsize = playsize;
+	channel->test_area = (unsigned short)address;
 
 	//jo_set_default_background_color(JO_COLOR_DarkYellow);
+	/*if ((short)m68k_com->start - 2 < chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkGreen);
+	}
+	else if ((short)m68k_com->start - 2 > chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkPurple);
+	}
+	else {
+		jo_set_default_background_color(JO_COLOR_DarkYellow);
+	}*/
 
 	chn_set_final_pitch(channel, instrument, sample, note, note_offset, cent, freq_mul, freq_div, reg_detune);
 
 	//jo_set_default_background_color(JO_COLOR_DarkRed);
+	/*if ((short)m68k_com->start - 2 < chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkGreen);
+	}
+	else if ((short)m68k_com->start - 2 > chnNumber) {
+		jo_set_default_background_color(JO_COLOR_DarkPurple);
+	}
+	else {
+		jo_set_default_background_color(JO_COLOR_DarkYellow);
+	}*/
 
 	chn_set_final_level(channel, patch_leader_channel, instrument, level, scaling);
 
-	//jo_set_default_background_color(JO_COLOR_DarkGray);
+	//jo_set_default_background_color(JO_COLOR_Black);
 }
 #pragma GCC pop_options
 
 void chn_release(short chnNumber) {
 	if (chnNumber < 0) return;
-	if (m68k_com->chnCtrl[chnNumber].melodic_data == 0) chn_cease(chnNumber);
+	if (chnCtrl[chnNumber].melodic_data == 0) chn_cease(chnNumber);
 	else {
-		m68k_com->chnCtrl[chnNumber].melodic_data = m68k_com->chnCtrl[chnNumber].melodic_data | MELODIC_KEYOFF;
-		m68k_com->chnCtrl[chnNumber].macro_states = 0xFF; // Flag each macro as being in the release state
+		chnCtrl[chnNumber].melodic_data = chnCtrl[chnNumber].melodic_data | MELODIC_KEYOFF;
+		chnCtrl[chnNumber].macro_states = 0xFF; // Flag each macro as being in the release state
 	} 
 }
 
 void	chn_cease(short chnNumber)
 {
 	if (chnNumber < 0) return;
-	if (m68k_com->chnCtrl[chnNumber].ctrlType <= 0 && m68k_com->chnCtrl[chnNumber].melodic_data == 0) // If it is a volatile or protected sound, the expected control method is to mute the sound and let it end itself.
+	if (chnCtrl[chnNumber].ctrlType <= 0 && chnCtrl[chnNumber].melodic_data == 0) // If it is a volatile or protected sound, the expected control method is to mute the sound and let it end itself.
 	{												// Protected sounds have a permission state of "until they end".
-		m68k_com->chnCtrl[chnNumber].volume = 0;
+		chnCtrl[chnNumber].volume = 0;
 	}
 	else {
 		chn_release(chnNumber);
-		m68k_com->chnCtrl[chnNumber].sh2_permit = 0; // If it is a melodic or looping sound, the control method is to command it to stop.	}
+		chnCtrl[chnNumber].sh2_permit = 0; // If it is a melodic or looping sound, the control method is to command it to stop.	}
 	}
 }
 
@@ -1423,7 +1478,7 @@ void	chn_release_all() {
 }
 
 int test_func(short chnNumber) {
-	return m68k_com->chnCtrl[chnNumber].test_area;
+	return chnCtrl[chnNumber].test_area;
 }
 
 int test_inst(short insNumber) {
@@ -1997,7 +2052,7 @@ short	initialize_new_channel(short insNumber) {
 	chn_set_values(numberChans);
 	// This fixes a bug related to the first time a pcm sample plays
 	// Its value will be overwritten by chn_play anyway, so any non-zero value should work
-	m68k_com->chnCtrl[numberChans].ctrlType = PCM_PROTECTED;
+	chnCtrl[numberChans].ctrlType = PCM_PROTECTED;
 	numberChans++;
 	return numberChans - 1;
 }
@@ -2005,6 +2060,7 @@ short	initialize_new_channel(short insNumber) {
 void		sdrv_vblank_rq(void)
 {
 	//jo_printf(0, 0, "drv_stat(%i)", m68k_com->start);
+	jo_dma_copy(chnCtrl, (void*)m68k_com->chnCtrl, sizeof(_CHN_CTRL) * CHN_CTRL_MAX);
 	m68k_com->start = 1;
 }
 
