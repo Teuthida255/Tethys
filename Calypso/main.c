@@ -4,7 +4,7 @@
 #include "keyboard_funcs.h"
 #include "samples.h"
 
-#define CALYPSO_DEBUG 0
+#define CALYPSO_DEBUG 1
 
 #define PAN_LEFT_START 16
 #define MAX_PAN_VALUE 15
@@ -1196,6 +1196,23 @@ short getNumPages(option_page* option) {
 	return (option->num_options % OPTIONS_PER_PAGE == 0) ? ((option->num_options / OPTIONS_PER_PAGE) - 1) : (option->num_options / OPTIONS_PER_PAGE);
 }
 
+
+short load_save_data(jo_backup_device dev) {
+	short** file_buffer = (short**)jo_backup_load_file_contents(dev, "CALYINST.DAT", JO_NULL);
+	if (file_buffer == JO_NULL) {
+		return 1;
+	}
+	
+	for (short i = 0; i < 0x40; i++) {
+		for (short j = 0; i < 0x100; i++) {
+			option_values[EDITOR_INST][i][j] = file_buffer[i][j];
+		}
+	}
+
+	return 0;
+}
+
+
 void update_engine_state(void) {
 	dsp_load_base_variables();
 	for (short i = 0; i < NUM_CHANNELS; i++) {
@@ -2124,6 +2141,15 @@ void			my_draw(void)
 	//slSynch();
 }
 
+static int input_id;
+void			wait_for_input(void) {
+	if (jo_is_input_key_down(0, JO_KEY_START)) {
+		jo_core_remove_callback(input_id);
+		jo_core_add_vblank_callback(sdrv_vblank_rq);
+		jo_core_add_callback(my_draw);
+	}
+}
+
 void			jo_main(void)
 {
 	jo_core_init(JO_COLOR_Black);
@@ -2154,7 +2180,7 @@ void			jo_main(void)
 	To convert a sound to 8-bit
 	ffmpeg -i %this%.wav -f s8 -ac 1 -ar (bitrate) %this%.PCM
 	*/
-	 
+
 	short error_state = 0;
 	for (short i = 0; i < NUM_SAMPLES; i++) {
 		if (i < NumberOfSamples) { // Read from samples.h
@@ -2229,26 +2255,30 @@ void			jo_main(void)
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " a valid sample loop type!");
 					break;
 				case 4:
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a start point (%d)", samp->filename, option_values[EDITOR_PCM][i][PCM_SAMPLESTART]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a start point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_SAMPLESTART]);
 					break;
 				case 5:
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop start point (%d)", samp->filename, option_values[EDITOR_PCM][i][PCM_LOOPSTART]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop start point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_LOOPSTART]);
 					break;
 				case 6:
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop end point (%d)", samp->filename, option_values[EDITOR_PCM][i][PCM_LOOPEND]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop end point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_LOOPEND]);
 					break;
 				case 7:
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid base note (%d)!", samp->filename, option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid base note!", samp->filename, option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
 					break;
 				default:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "An entirely undocumented");
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " error occured! Tell the dev now!");
 				}
-				jo_printf_with_color(1, 12, JO_COLOR_INDEX_Red, "Please recompile the disk");
-				jo_printf_with_color(1, 13, JO_COLOR_INDEX_Red, " and try again.");
+				jo_printf_with_color(1, 13, JO_COLOR_INDEX_Red, "Please recompile the program");
+				jo_printf_with_color(1, 14, JO_COLOR_INDEX_Red, " and try again.");
 				while (true) {
 
 				}
@@ -2268,7 +2298,6 @@ void			jo_main(void)
 	jo_clear_screen_line(6);
 	jo_printf(1, 6, "%d bytes left of space...", 0x7F800 - (int)scsp_load);
 
-	jo_printf(1, 7, "Setting up...");
 	for (short i = 0; i < NUM_INSTRUMENTS; i++) {
 		instruments[i] = initialize_new_instrument(i);
 	}
@@ -2282,13 +2311,51 @@ void			jo_main(void)
 		chn_instrument_change(i, instruments[0]);
 	}
 
-	init_option_values();
-	write_option_values_and_update();
-	jo_printf(1, 7, "Setting up...Done!");
+	jo_printf(1, 7, "Checking backup memory...");
 
-	jo_core_add_vblank_callback(sdrv_vblank_rq);
-	jo_core_add_callback(my_draw);
+	bool load_defaults = false;
+	bool check_external = false;
+
+	if (!jo_backup_mount(JoCartridgeMemoryBackup)) {
+		jo_printf(1, 7, "Checking backup memory...Not found!");
+		check_external = true;
+	}
+	else if (load_save_data(JoCartridgeMemoryBackup) != 0) {
+		jo_printf(1, 7, "Checking backup memory...No save found!");
+		check_external = true;
+	}
+	if (check_external) {
+		jo_printf(1, 8, "Checking external memory...");
+		if (!jo_backup_mount(JoExternalDeviceBackup)) {
+			jo_printf(1, 8, "Checking external memory...Not found!");
+			load_defaults = true;
+		}
+		else if (load_save_data(JoExternalDeviceBackup) != 0) {
+			jo_printf(1, 8, "Checking external memory...No save found!");
+			load_defaults = true;
+		}
+	}
+	if (load_defaults) {
+		jo_printf(1, 9, "Loading default parameters...");
+		init_option_values();
+		jo_printf(1, 9, "Loading default parameters...Done!");
+	}
+	
+	jo_printf(1, 11, "Setting up...");
+	write_option_values_and_update();
+	jo_printf(1, 11, "Setting up...Done!");
+
+	if (jo_get_input_type(0) == JoRegularKeyboard) {
+		jo_printf_with_color(1, 27, JO_COLOR_INDEX_Purple, "Press ESC to begin!");
+	}
+	else {
+		jo_printf_with_color(1, 27, JO_COLOR_INDEX_Purple, "Press START to begin!");
+	}
+
+	input_id = jo_core_add_callback(wait_for_input);
 	jo_core_run();
+
+	
 }
 
 /*
