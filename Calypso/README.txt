@@ -9,9 +9,9 @@ Features:
  -Intuitive system for designing FM instruments
  -Sample map support
  -Instrument macro support, allowing for parameter envelopes
+ -Saving and loading sound parameters
 
 Planned Features:
- -Saving and loading instrument data
  -Optimized sound code
 
 Although Calypso implements the SCSP-DSP's features to a small extent, the particular complexities of working with it (particularly within the confines of Calypso's narrow scope) mean that a full DSP test program will likely be a separate project.
@@ -23,5 +23,12 @@ Credits:
  -SCSP-DSP code documented by R. Belmont and Richard Bannister's Audio Overload SDK (https://github.com/nmlgc/aosdk)
 
 Special Thanks:
- -nando
- -SuperReye
+ -nando (program help)
+ -SuperReye (program help)
+ -Crisps (program testing and moral support)
+ -jvsTSX (program testing and moral support)
+ -FΛDE (program testing and moral support)
+ -acrouzet (program testing and moral support)
+ -Euly (program testing)
+ -ChiptunedRaijin (program testing)
+ 
