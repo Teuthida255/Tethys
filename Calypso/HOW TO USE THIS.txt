@@ -35,10 +35,14 @@ When using a keyboard, the controls works as follows instead:
   -Various Keys: Play the current Patch (more on Patches in a later section, more on keys below)
   -Shift: Play only the current Instrument while held(see above)
   -F3/F4: Lower or raise (respectively) the current Octave (more on octaves below)
-  -Escape: Stop all sounds and open the help/credits screen (press Start again to close it)
+  -Escape: Stop all sounds and open the help/credits screen (press Escape again to close it)
  -Modifiers:
   -Ctrl: Hold to increase the strength of moving the cursor and changing values
   -Alt: Hold to move the cursor and change values while their respective buttons are held instead of just when they are pressed
+
+--SAVING AND LOADING--
+
+You can save or load data in Calypso by pressing Q or E (with a keyboard) or L or R (with a controller) on the help screen and following the displayed prompts. Saving creates a snapshot of the program's current state, storing the data for every Multi-Sample, Sample, Instrument, Macro and Channel; the next time you run Calypso, this data will be loaded in automatically. Do note that save files do not store the actual PCM data used by the Samples, only their associated settings (for more information, please consult the 'SAVING AND LOADING IN THE PROGRAM' of the 'HOW TO RUN THIS' text file).
 
 --PLAYING NOTES--
 
@@ -486,7 +490,7 @@ The SCSP throws all of these notions out the window. We cannot approach the SCSP
  -Send their audio to one of the 16 effects module inputs
  -Act as an input for an effects module's calculations
  -Perform all of these roles at once
-Although the SCSP is frequently described as a 32-channel sample chip that can 'become a 16-channel, 2-operator FM chip' (or an '8-channel, 4-op FM chip', or a '16-channel, 8-op FM chip', and so on), this Patch Brained approach falls apart upon taking a look at the reality of the chip. What we have here is FM Free Love, where any number of 'operators' can modulate any number of other 'operators' in any order they please, without ever needing the guiding hand of an FM algorithm from a 'channel'; the 'algorithm' and the titles of 'carrier' and 'modulator' emerge organically from the interaction of each slot's own modulation inputs, and can surpass the complexity of the likes of the YM2612's routing schemes with ease.
+Although the SCSP is frequently described as a 32-channel sample chip that can 'become a 16-channel, 2-operator FM chip' (or an '8-channel, 4-op FM chip', or a '16-channel, 8-op FM chip', and so on), this Patch Brained approach falls apart upon taking a look at the reality of the system. What we have here is FM Free Love, where any number of 'operators' can modulate any number of other 'operators' in any order they please, without ever needing the guiding hand of an FM algorithm from a 'channel'; the 'algorithm' and the titles of 'carrier' and 'modulator' emerge organically from the interaction of each slot's own modulation inputs, and can surpass the complexity of the likes of the YM2612's routing schemes with ease.
 
 I'm producing all this verbiage, of course, to provide some grounding why Calypso's 'Patches' do not follow the rules people have come to expect from an FM instrument editor. While I have made some concessions to orthodoxy - being able to maintain the frequency ratios and relative volumes of all involved waveforms is an unambiguous good -, trying to paste algorithms over the SCSP is a waste of its musical potential. While I don't expect much commitment on the user's part to learn a simple 'toy' program, I encourage you to approach the guide below with an open mind to best explore the capabilities of the software.
 
@@ -495,7 +499,7 @@ I'm producing all this verbiage, of course, to provide some grounding why Calyps
 
 The key to creating FM in Calypso is the 'Patch Length' parameter in the Instrument Editor. When this parameter is set to something other than 0, it will recruit that many additional Instruments after the current one to be keyed on and off with it; as an example, if Instrument 06 has a 'Patch Length' of 3 and plays in channel 1, then Instrument 07 will play in channel 2, Instrument 08 will play in channel 3, and Instrument 09 will play in channel 4 simultaneously, and the reverse will happen once Instrument 06 stops playing. Moreover, each of these Instruments will borrow their note value from the 'patch leader', and will inherit any Macro's with the 'Propagate Patches' parameter in it. This is the closest the SCSP can get to an 'FM patch' while still respecting the hardware's features, and will be called a 'Patch' (note the capital P) to distinguish it from the """authentic""" patches of its peers.
 
-The next step to shaping your Patch is to decide which of your Instruments will act as 'modulators' (Instruments that modulate other Instruments and aren't audible beyond that), which will act as 'carriers' (Instruments that are modulated by the modulators, output their audio from the SCSP, and don't modulate anything else). This is a false division on the SCSP, as there's nothing stopping an Instrument from modulating and being heard at the same time, but it's a useful one for the purposes of this guide.
+The next step to shaping your Patch is to decide which of your Instruments will act as 'modulators' (Instruments that modulate other Instruments and aren't audible beyond that), which will act as 'carriers' (Instruments that are modulated by the modulators, output their audio from the SCSP, and don't modulate anything else). This is a false distinction on the SCSP, as there's nothing stopping an Instrument from modulating and being heard at the same time, but it's a useful one for the purposes of this guide.
 
 To prevent an Instrument from being heard, simply set its 'Direct Volume' and 'Effect Volume' parameters to 0; from here on out, the strength of the modulation will be determined entirely by the Instrument's 'Total Level' value and volume envelope, along with the volume of the Sample itself. To prevent the modulation strength from changing with the volume of the rest of the Patch, enable the 'Ignore Velocity' option in the Instrument Editor as well.
 
