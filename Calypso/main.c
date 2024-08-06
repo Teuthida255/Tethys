@@ -4,7 +4,7 @@
 #include "keyboard_funcs.h"
 #include "samples.h"
 
-#define CALYPSO_DEBUG 1
+#define CALYPSO_DEBUG 0
 
 #define PAN_LEFT_START 16
 #define MAX_PAN_VALUE 15
@@ -17,6 +17,10 @@ int framerate;
 #define NUM_INSTRUMENTS (64)
 #define NUM_CHANNELS 32
 #define NUM_EDITORS 5
+
+#define MAX_SLOTS 0x40
+#define MAX_OPTIONS 0x100
+#define SAVE_SIZE MAX_SLOTS * MAX_OPTIONS
 
 #define NUM_PCM_OPTIONS 6
 enum pcm_options {
@@ -1196,22 +1200,98 @@ short getNumPages(option_page* option) {
 	return (option->num_options % OPTIONS_PER_PAGE == 0) ? ((option->num_options / OPTIONS_PER_PAGE) - 1) : (option->num_options / OPTIONS_PER_PAGE);
 }
 
-
-short load_save_data(jo_backup_device dev) {
-	short** file_buffer = (short**)jo_backup_load_file_contents(dev, "CALYINST.DAT", JO_NULL);
-	if (file_buffer == JO_NULL) {
-		return 1;
-	}
-	
-	for (short i = 0; i < 0x40; i++) {
-		for (short j = 0; i < 0x100; i++) {
-			option_values[EDITOR_INST][i][j] = file_buffer[i][j];
-		}
-	}
-
-	return 0;
-}
-
+static char* const FILENAMES[5][16] = {
+	{
+		"CL_ML_0.SAV",
+		"CL_ML_1.SAV",
+		"CL_ML_2.SAV",
+		"CL_ML_3.SAV",
+		"CL_ML_4.SAV",
+		"CL_ML_5.SAV",
+		"CL_ML_6.SAV",
+		"CL_ML_7.SAV",
+		"CL_ML_8.SAV",
+		"CL_ML_9.SAV",
+		"CL_ML_A.SAV",
+		"CL_ML_B.SAV",
+		"CL_ML_C.SAV",
+		"CL_ML_D.SAV",
+		"CL_ML_E.SAV",
+		"CL_ML_F.SAV",
+	},
+	{
+		"CL_SM_0.SAV",
+		"CL_SM_1.SAV",
+		"CL_SM_2.SAV",
+		"CL_SM_3.SAV",
+		"CL_SM_4.SAV",
+		"CL_SM_5.SAV",
+		"CL_SM_6.SAV",
+		"CL_SM_7.SAV",
+		"CL_SM_8.SAV",
+		"CL_SM_9.SAV",
+		"CL_SM_A.SAV",
+		"CL_SM_B.SAV",
+		"CL_SM_C.SAV",
+		"CL_SM_D.SAV",
+		"CL_SM_E.SAV",
+		"CL_SM_F.SAV",
+	},
+	{
+		"CL_IN_0.SAV",
+		"CL_IN_1.SAV",
+		"CL_IN_2.SAV",
+		"CL_IN_3.SAV",
+		"CL_IN_4.SAV",
+		"CL_IN_5.SAV",
+		"CL_IN_6.SAV",
+		"CL_IN_7.SAV",
+		"CL_IN_8.SAV",
+		"CL_IN_9.SAV",
+		"CL_IN_A.SAV",
+		"CL_IN_B.SAV",
+		"CL_IN_C.SAV",
+		"CL_IN_D.SAV",
+		"CL_IN_E.SAV",
+		"CL_IN_F.SAV",
+	},
+	{
+		"CL_MC_0.SAV",
+		"CL_MC_1.SAV",
+		"CL_MC_2.SAV",
+		"CL_MC_3.SAV",
+		"CL_MC_4.SAV",
+		"CL_MC_5.SAV",
+		"CL_MC_6.SAV",
+		"CL_MC_7.SAV",
+		"CL_MC_8.SAV",
+		"CL_MC_9.SAV",
+		"CL_MC_A.SAV",
+		"CL_MC_B.SAV",
+		"CL_MC_C.SAV",
+		"CL_MC_D.SAV",
+		"CL_MC_E.SAV",
+		"CL_MC_F.SAV",
+	},
+	{
+		"CL_CH_0.SAV",
+		"CL_CH_1.SAV",
+		"CL_CH_2.SAV",
+		"CL_CH_3.SAV",
+		"CL_CH_4.SAV",
+		"CL_CH_5.SAV",
+		"CL_CH_6.SAV",
+		"CL_CH_7.SAV",
+		"CL_CH_8.SAV",
+		"CL_CH_9.SAV",
+		"CL_CH_A.SAV",
+		"CL_CH_B.SAV",
+		"CL_CH_C.SAV",
+		"CL_CH_D.SAV",
+		"CL_CH_E.SAV",
+		"CL_CH_F.SAV",
+	},
+};
 
 void update_engine_state(void) {
 	dsp_load_base_variables();
@@ -1545,9 +1625,55 @@ void write_option_values_and_update(void) {
 	write_all_values = false;
 }
 
+
+// This function (and save_data()) both assume the proper device had already been mounted
+short load_save_data(jo_backup_device dev, bool at_start) {
+	short* file_buffer = JO_NULL;
+	for (short i = 0; i < NUM_EDITORS; i++) {
+		for (short j = 0; j < MAX_SLOTS / 4; j++) {
+			if (!jo_backup_file_exists(dev, FILENAMES[i][j])) return 1;
+
+			if (at_start)
+				jo_printf(1, 9, "Loading Editor %d, Section %d...  ", i + 1, j + 1);
+			else
+				jo_printf_with_color(1, 17, JO_COLOR_INDEX_Green, "   Loading Editor %d, Section %d...  ", i + 1, j + 1);
+
+			file_buffer = jo_backup_load_file_contents(dev, FILENAMES[i][j], JO_NULL);
+			if (file_buffer == JO_NULL) return 2;
+
+			for (short k = 0; k < 4; k++) {
+				for (short m = 0; m < MAX_OPTIONS; m++) {
+					option_values[i][j * 4 + k][m] = file_buffer[k * MAX_OPTIONS + m];
+				}
+			}
+			jo_free(file_buffer);
+		}
+	}
+	if (at_start) {
+		jo_clear_screen_line(9);
+		jo_printf(1, 9, "Loading complete!");
+	}
+
+	return 0;
+}
+
+short save_data(jo_backup_device dev) {
+	for (short i = 0; i < NUM_EDITORS; i++) {
+		for (short j = 0; j < MAX_SLOTS / 4; j++) {
+			jo_printf_with_color(1, 17, JO_COLOR_INDEX_Green, "   Saving Editor %d, Section %d...  ", i + 1, j + 1);
+			if (!jo_backup_save_file_contents(dev, FILENAMES[i][j], "", option_values[i][j * 4], 0x100 * 0x4 * sizeof(short))) return i;
+			if (!jo_backup_file_exists(dev, FILENAMES[i][j])) return i + NUM_EDITORS;
+		}
+	}
+
+	return 0;
+}
+
+
 void			my_draw(void)
 {
 	bool using_keyboard = (jo_get_input_type(0) == JoRegularKeyboard);
+	static bool disable_inputs = false;
 	if (using_keyboard) {
 		update_keyboard_state();
 	}
@@ -1568,9 +1694,9 @@ void			my_draw(void)
 		"  Left/Right = Lower/Raise Value",
 		"  L/R = Change Slot",
 		"  Y/Z = Change Editor.",
-		"  Press A to play the current patch.",
+		"  Press A to play the current Patch.",
 		"  Hold X to only play the.",
-		"    current instrument.",
+		"    current Instrument.",
 		"  Hold B for coarser value changes.",
 		"  Hold C for less precise changes.",
 		" Consult the readme for more info.",
@@ -1581,9 +1707,9 @@ void			my_draw(void)
 		"  Left/Right = Lower/Raise Value",
 		"  Tab + Left/Right = Change Slot",
 		"  Tab + Up/Down = Change Editor",
-		"  Press keys to play the patch.",
+		"  Press keys to play the Patch.",
 		"  Hold Shift to only play the",
-		"    current instrument.",
+		"    current Instrument.",
 		"  Hold Ctrl for less precise changes.",
 		"  Hold Alt for coarser value changes.",
 		"Consult the readme for more info.",
@@ -1605,22 +1731,179 @@ void			my_draw(void)
 	};
 	static const short CREDITS_LINES_START = 17;
 
-	if (jo_is_input_key_down(0, JO_KEY_START)) {
+	static const short NUM_SAVELOAD_LINES = 12;
+	static const char* SAVELOAD_TEXT[] = {
+		"    Press %c or %c to load or save.   ",
+		"     What would you like to do?     ",
+		"     Erase all unsaved settings?    ",
+		"        Loading save data...        ",
+		"       File loaded! Have fun!       ",
+		"    Overwrite any previous data?    ",
+		"           Saving data...           ",
+		"     Save file created! Enjoy!      ",
+		"  Couldn't find a backup device...  ",
+		"           Saving failed!           ",
+		"  Couldn't locate the save file...  ",
+		"          Loading failed!           ",
+	};
+	static const char* SAVELOAD_PROMPTS[] = {
+		"",
+		"        (%c = Load, %c = Save)        ",
+		"         (%c = Yes, %c = No)          ",
+		"",
+		"",
+		"         (%c = Yes, %c = No)          ",
+		"",
+		"",
+		" Please connect one and try again.  ",
+		"",
+		"",
+		"",
+	};
+
+	enum saveload_states {
+		SAVELOAD_INITIAL,
+		SAVELOAD_CHOICE,
+		SAVELOAD_LOAD_PROMPT,
+		SAVELOAD_LOAD_WAIT,
+		SAVELOAD_LOAD_DONE,
+		SAVELOAD_SAVE_PROMPT,
+		SAVELOAD_SAVE_WAIT,
+		SAVELOAD_SAVE_DONE,
+		SAVELOAD_ERROR_NODEVICE,
+		SAVELOAD_ERROR_SAVEFAILURE,
+		SAVELOAD_ERROR_SAVEMISSING,
+		SAVELOAD_ERROR_LOADFAILURE,
+	};
+
+	static short saveload_status = 0;
+	if (jo_is_input_key_down(0, JO_KEY_START) && !disable_inputs) {
 		show_info_page = !show_info_page;
+		saveload_status = 0;
 	}
 
 	chn_remove_melodic_flags();
 
 	if (show_info_page) {
 		chn_cease_all();
+
+		bool left_pressed = jo_is_input_key_down(0, JO_KEY_L);
+		bool right_pressed = jo_is_input_key_down(0, JO_KEY_R);
+
+		static jo_backup_device dev = JoInternalMemoryBackup;
+
+		if ((left_pressed || right_pressed) && !disable_inputs) {
+			switch (saveload_status) {
+			case SAVELOAD_INITIAL:
+				saveload_status = SAVELOAD_CHOICE;
+				break;
+			case SAVELOAD_CHOICE:
+				saveload_status = (right_pressed) ? SAVELOAD_SAVE_PROMPT : SAVELOAD_LOAD_PROMPT;
+				break;
+			case SAVELOAD_LOAD_PROMPT:
+				if (right_pressed) {
+					saveload_status = SAVELOAD_INITIAL;
+				}
+				else {
+					saveload_status = SAVELOAD_LOAD_WAIT;
+					disable_inputs = true;
+				}
+				break;
+			case SAVELOAD_SAVE_PROMPT:
+				if (right_pressed) {
+					saveload_status = SAVELOAD_INITIAL;
+				}
+				else {
+					saveload_status = SAVELOAD_SAVE_WAIT;
+					disable_inputs = true;
+				}
+				break;
+			}
+		}
+
+		char left_button = (using_keyboard) ? 'Q' : 'L';
+		char right_button = (using_keyboard) ? 'E' : 'R';
+
 		for (short i = 0; i < 29; i++) {
 			jo_clear_screen_line(i + TITLE_LINES_START);
 			if (i >= TITLE_LINES_START && i < TITLE_LINES_START + NUM_TITLE_LINES)
-				jo_printf_with_color(0, i + TITLE_LINES_START, JO_COLOR_INDEX_Yellow, TITLE_TEXT[i - TITLE_LINES_START]);
+				jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Yellow, TITLE_TEXT[i - TITLE_LINES_START]);
 			else if (i >= INFO_LINES_START && i < INFO_LINES_START + NUM_INFO_LINES)
-				jo_printf_with_color(0, i + TITLE_LINES_START, JO_COLOR_INDEX_Purple, ((!using_keyboard) ? INFO_TEXT[i - INFO_LINES_START] : INFO_TEXT_KEYS[i - INFO_LINES_START]));
+				jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Purple, ((!using_keyboard) ? INFO_TEXT[i - INFO_LINES_START] : INFO_TEXT_KEYS[i - INFO_LINES_START]));
 			else if (i >= CREDITS_LINES_START && i < CREDITS_LINES_START + NUM_CREDITS_LINES)
-				jo_printf_with_color(0, i + TITLE_LINES_START, JO_COLOR_INDEX_Red, CREDITS_TEXT[i - CREDITS_LINES_START]);
+				jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Red, CREDITS_TEXT[i - CREDITS_LINES_START]);
+			else if (i == INFO_LINES_START + NUM_INFO_LINES && saveload_status < NUM_SAVELOAD_LINES)
+				jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Green, SAVELOAD_TEXT[saveload_status], left_button, right_button);
+			else if (i == INFO_LINES_START + NUM_INFO_LINES + 1 && saveload_status < NUM_SAVELOAD_LINES) {
+				if (saveload_status <= SAVELOAD_ERROR_NODEVICE)
+					jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Green, SAVELOAD_PROMPTS[saveload_status], left_button, right_button);
+				else
+					jo_printf_with_color(1, i + TITLE_LINES_START, JO_COLOR_INDEX_Green, "Error Code: %d", jo_backup_get_last_status(dev));
+			}
+		}
+
+		if (disable_inputs) {
+			if (saveload_status == SAVELOAD_LOAD_WAIT) {
+				if (jo_backup_mount(JoCartridgeMemoryBackup)) {
+					dev = JoCartridgeMemoryBackup;
+				}
+				else if (jo_backup_mount(JoExternalDeviceBackup)) {
+					dev = JoExternalDeviceBackup;
+				}
+				if (dev == JoInternalMemoryBackup) {
+					saveload_status = SAVELOAD_ERROR_NODEVICE;
+				}
+				else {
+					short load_result = load_save_data(dev, false);
+					switch (load_result) {
+					case 1:
+						saveload_status = SAVELOAD_ERROR_SAVEMISSING;
+						break;
+					case 2:
+						saveload_status = SAVELOAD_ERROR_LOADFAILURE;
+						break;
+					default:
+						saveload_status = SAVELOAD_LOAD_DONE;
+					}
+				}
+			}
+			else if (saveload_status == SAVELOAD_SAVE_WAIT) {
+				
+				if (jo_backup_mount(JoCartridgeMemoryBackup)) {
+					dev = JoCartridgeMemoryBackup;
+				}
+				else if (jo_backup_mount(JoExternalDeviceBackup)) {
+					dev = JoExternalDeviceBackup;
+				}
+				if (dev == JoInternalMemoryBackup) {
+					saveload_status = SAVELOAD_ERROR_NODEVICE;
+				}
+				else {
+					short save_result = save_data(dev);
+					switch (save_result) {
+					case 1:
+					case 2:
+					case 3:
+					case 4:
+					case 5:
+						saveload_status = SAVELOAD_ERROR_SAVEFAILURE;
+						break;
+					case 6:
+					case 7:
+					case 8:
+					case 9:
+					case 10:
+						saveload_status = SAVELOAD_ERROR_SAVEMISSING;
+						break;
+					default:
+						saveload_status = SAVELOAD_SAVE_DONE;
+					}
+				}	
+			}
+			else { // This should never be
+				saveload_status = SAVELOAD_INITIAL;
+			}
+			disable_inputs = false;
 		}
 	}
 
@@ -2320,7 +2603,7 @@ void			jo_main(void)
 		jo_printf(1, 7, "Checking backup memory...Not found!");
 		check_external = true;
 	}
-	else if (load_save_data(JoCartridgeMemoryBackup) != 0) {
+	else if (load_save_data(JoCartridgeMemoryBackup, true) != 0) {
 		jo_printf(1, 7, "Checking backup memory...No save found!");
 		check_external = true;
 	}
@@ -2330,7 +2613,7 @@ void			jo_main(void)
 			jo_printf(1, 8, "Checking external memory...Not found!");
 			load_defaults = true;
 		}
-		else if (load_save_data(JoExternalDeviceBackup) != 0) {
+		else if (load_save_data(JoExternalDeviceBackup, true) != 0) {
 			jo_printf(1, 8, "Checking external memory...No save found!");
 			load_defaults = true;
 		}
