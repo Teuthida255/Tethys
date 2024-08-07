@@ -507,6 +507,8 @@ Modulation is handled by a number of parameters in the Instrument Editor. 'Modul
 
 (Important note: the modulation strength controlled by 'Modulation Level' increases exponentially, and will quickly result in glitchy sounds at higher levels due to the sample playback position being shifted outside the audio data's bounds and into other samples. If you're looking for unimpeded FM sounds, make sure to keep this parameter low!)
 
+(Addendum to the important note: as a general rule of thumb, the 256-sample padding added to waveform samples is perfectly safe up to a Modulation Level of 8, at which point each step up requires twice as much padding as the last - Level 8 requires around 512 samples, Level 9 requires 1024, and so on. The exact thresholds will vary, as you might expect, depending on the 'Total Level' parameter of the modulating Instrument(s), as well as the loudness of the samples themselves.)
+
 A number of relatively minor Instrument parameters also take on significantly more importance when designing Patches:
  -'Pitch Multiplier' and 'Pitch Divider' mimic both the multiplier settings of FM chips and the floating point-based frequency ratios of FM synthesizers like the Yamaha DX7.
  -'Cent Detune' and 'Register Detune' work similarly to the detune settings of most FM chips, with the former being better at larger detunes and the latter being more suited to small pitch adjustments that can fail at certain frequencies. For even stronger detunes, the 'Note Offset' parameter may prove useful.

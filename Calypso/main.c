@@ -768,15 +768,15 @@ void init_option_values() {
 	}
 
 	if (CALYPSO_DEBUG) {
-		option_values[EDITOR_INST][0][INST_PATCHLENGTH] = 0;
-		option_values[EDITOR_INST][0][INST_SAMPLE] = 0;
-		option_values[EDITOR_INST][1][INST_SAMPLE] = 1;
-		option_values[EDITOR_INST][2][INST_SAMPLE] = 2;
-		option_values[EDITOR_INST][3][INST_SAMPLE] = 3;
-		option_values[EDITOR_INST][4][INST_SAMPLE] = 4;
-		option_values[EDITOR_INST][5][INST_SAMPLE] = 5;
-		option_values[EDITOR_INST][6][INST_SAMPLE] = 6;
-		option_values[EDITOR_INST][7][INST_SAMPLE] = 7;
+		option_values[EDITOR_INST][0][INST_PATCHLENGTH] = 1;
+		option_values[EDITOR_INST][0][INST_SAMPLE] = 2;
+		option_values[EDITOR_INST][1][INST_SAMPLE] = 0;
+		option_values[EDITOR_INST][1][INST_VOLUME] = 0;
+		option_values[EDITOR_INST][1][INST_LEVEL] = 0;
+		option_values[EDITOR_INST][0][INST_MOD_INPUT_X] = 1;
+		option_values[EDITOR_INST][0][INST_MOD_INPUT_Y] = 1;
+		option_values[EDITOR_INST][0][INST_X_GENERATION] = 0;
+		option_values[EDITOR_INST][0][INST_Y_GENERATION] = 1;
 	}
 }
 

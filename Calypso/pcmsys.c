@@ -1683,9 +1683,8 @@ short			convert_bitrate_to_pitchword(short sampleRate)
 // Note: as I currently understand things, the actual maximum limit for FM sample offsets is incredibly high,
 // which would cause wavetable samples to take up far more space in memory than the typical user will ever need
 // This constant is a reasonable upper limit for most people
-// Future iterations of the sound driver should probably adjust the level of padding to match the level of FM
-// used for the sample
-#define MAX_FM_READ_OFFSET 256 
+// Future iterations of the driver should allow custom padding based on the amount of FM used for the sample
+#define MAX_FM_READ_OFFSET 256
 short initialize_new_pcm(Bool is8Bit, int sampleRate, Sint32 file_size, Sint32 playsize, Bool addSilence) {
 	if (addSilence) {
 		scsp_load = (unsigned int*)((unsigned int)scsp_load + MAX_FM_READ_OFFSET);
@@ -1778,7 +1777,6 @@ short			load_8bit_pcm(Sint8* filename, int sampleRate, Bool shouldLoop, Bool add
 	GFS_GetFileInfo(s_gfs, NULL, NULL, &file_size, NULL);
 
 	GFS_Close(s_gfs);
-
 
 	if (file_size > (64 * 1024)) return -1; // PCM size too large for general-purpose playback [could still work with timed execution & offets]
 
