@@ -72,10 +72,10 @@ Calypso itself will note any additional errors not caught by the compiler, mostl
 --HANDLING FM--
 
 Frequency modulation on the Sega Saturn works by using the modulators' audio position to offset the playback position of the carrier's sample by up to 128 audio samples ahead of or behind its 'expected' location:
- 	_   	_
-	/ \ 	/ \
+     _       _
+    / \     / \
    /   \   /   \
- _/ 	\_/ 	\_
+ _/     \_/     \_
  |<------|------>|    
 Read   Normal   Read
 Point  Read 	Point
@@ -83,10 +83,10 @@ w/FM   Point	w/FM
 
 This method does not check for loop points or the edges of a sample's data, so a sufficiently strong modulator sufficiently close to the start of end of a sample will cause it to read sample data outside its intended range:
 
- 	_   	_
-	/ \ 	/ \
- ww	\   /   \|~
-w  w	\_/ 	~
+     _       _
+    / \     / \
+ ww    \   /   \|~
+w  w    \_/      ~
  |<------|------>|    
 Other  Normal   Also
 Data   Read 	Other
