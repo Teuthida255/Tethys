@@ -71,7 +71,7 @@ Calypso itself will note any additional errors not caught by the compiler, mostl
 
 --HANDLING FM--
 
-Frequency modulation on the Sega Saturn works by using the modulators' audio position to offset the playback position of the carrier's sample by up to 128 audio samples ahead of or behind its 'expected' location:
+Frequency modulation on the Sega Saturn works by using the modulators' audio position to offset the playback position of the carrier's sample by a number of audio samples ahead of or behind its 'expected' location:
      _       _
     / \     / \
    /   \   /   \
@@ -92,7 +92,9 @@ Other  Normal   Also
 Data   Read 	Other
    	Point	Data
 
-As such, any sample that you want to perform modulation on needs some kind of padding in its data to prevent this scenario from playing out (unless you're into that sort of thing). The 'With_FM_Padding' settings in the sample load list accomplish this by repeatedly loading the sample in consecutive parts of memory and placing the sample start and loop points for the sample in the central waveform, which works wonders for simple looping samples, but is ill-suited to more complex samples with large differences between their beginnings and ends. If a sample fades in, you can solve one half of the problem using the 'With_Silence_At_Start' options, which will insert silence in between the new sample and the one before it; you can guard the end of the sample by using an external editor to insert around 128 audio samples of either silence (if the sample fades out) or the start of the sample's loop area (if the sample does not) and setting the loop end point of the sample to the start of this padding region. For certain types of samples, like the raw noise sample included with Calypso, you can also guard against FM bugs by simply setting the sample start point to somewhere later in the sample.
+As such, any sample that you want to perform modulation on needs some kind of padding in its data to lower the odds of this scenario playing out (unless you're into that sort of thing). The 'With_FM_Padding' settings in the sample load list accomplish this by repeatedly loading the sample in consecutive parts of memory and placing the sample start and loop points for the sample in the central waveform, which works wonders for simple looping samples, but is ill-suited to more complex samples with large differences between their beginnings and ends. If a sample fades in, you can solve one half of the problem using the 'With_Silence_At_Start' options, which will insert silence in between the new sample and the one before it; you can guard the end of the sample by using an external editor to insert around 128 audio samples of either silence (if the sample fades out) or the start of the sample's loop area (if the sample does not) and setting the loop end point of the sample to the start of this padding region. For certain types of samples, like the raw noise sample included with Calypso, you can also guard against FM bugs by simply setting the sample start point to somewhere later in the sample.
+
+(Important note: in my youthful ignorance, I originally stated in this document that FM modulation couldn't displace audio by more than 128 samples, and I designed the FM padding feature with that number in mind. As it turns out, my estimate was off by a factor of at least 64, making the real maximum displacement somewhere in the range of 8192 samples. Loading 128 sine wave samples into the SCSP doesn't do anyone any good, though, so I've simply accepted the shortcomings of SCSP FM and set the padding value to 256.)
 
 
 --SCSP SAMPLE TRICKS--

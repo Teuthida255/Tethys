@@ -169,8 +169,8 @@ Patch Length* (0 to 7, 0 disables):
 Ignore Velocity* (On/Off):
  If On, the Instrument will be unaffected by its Channel's 'Velocity' parameter, and will always play at its given 'Total Level' value. This feature is primarily intended for creating FM Patches; the 'MAKING FM INSTRUMENTS' section later in this document will cover this in more detail.
 
-Modulation Level (0 to 7):
- Determines how much the Instrument should be frequency modulated by its modulation inputs. 0 represents a complete lack of modulation and 7 represents the highest level of modulation, although I've found that only values above 4 produce any noticeable difference in sound. To read more on this parameter, go to the 'MAKING FM INSTRUMENTS' section later in this document.
+Modulation Level (0 to 15):
+ Determines how much the Instrument should be frequency modulated by its modulation inputs. A value of 4 or below disables modulation entirely and 15 represents the highest level of modulation, although I've found that only values above 4 produce any noticeable difference in sound. To read more on this parameter, go to the 'MAKING FM INSTRUMENTS' section later in this document.
 
 Modulation Input X (-16 to 15):
 Modulation Input Y (-16 to 15):
@@ -504,6 +504,8 @@ The next step to shaping your Patch is to decide which of your Instruments will 
 To prevent an Instrument from being heard, simply set its 'Direct Volume' and 'Effect Volume' parameters to 0; from here on out, the strength of the modulation will be determined entirely by the Instrument's 'Total Level' value and volume envelope, along with the volume of the Sample itself. To prevent the modulation strength from changing with the volume of the rest of the Patch, enable the 'Ignore Velocity' option in the Instrument Editor as well.
 
 Modulation is handled by a number of parameters in the Instrument Editor. 'Modulation Level' controls the coarse strength of the modulation, and should generally be set to a value of at least 5 to take effect. Each Instrument can accept up to two different channels as modulation inputs, with 'Modulation Input X' and 'Modulation Input Y' determining which of those channels to use relative to the channel's base position (The 'X Data Generation' and 'Y Data Generation' parameters also affect the over tone of these inputs, but the distinction between the two is usually fairly small). Because of how Calypso handles Patches, you can calculate which values to use here by subtracting the Instrument number of your 'modulators' from the number of your 'carriers', then assigning that number to one of the input parameters (if Instrument 07 is a 'modulator' and Instrument 09 is a 'carrier', then Instrument 09 needs to set one of its inputs to 7 - 9: -2). An input value of 0 causes the channel to modulate itself, producing a similar 'feedback' effect found in most FM chips; unlike those chips, however, any 'operator' can perform feedback, and feedback can also be combined with another input for a more complex sound.
+
+(Important note: the modulation strength controlled by 'Modulation Level' increases exponentially, and will quickly result in glitchy sounds at higher levels due to the sample playback position being shifted outside the audio data's bounds and into other samples. If you're looking for unimpeded FM sounds, make sure to keep this parameter low!)
 
 A number of relatively minor Instrument parameters also take on significantly more importance when designing Patches:
  -'Pitch Multiplier' and 'Pitch Divider' mimic both the multiplier settings of FM chips and the floating point-based frequency ratios of FM synthesizers like the Yamaha DX7.

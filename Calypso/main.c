@@ -1375,7 +1375,7 @@ const edit_option options[NUM_INST_OPTIONS - INS_MACROS_MAX + 1] = {
 	{"  Amp LFO Waveform", 1, 0, 3, DISP_LFOWAVE},
 	{"      Patch Length", 2, 0, 7, DISP_ZERODISABLE},
 	{"   Ignore Velocity", 1, 0, 1, DISP_ONOFF},
-	{"  Modulation Level", 2, 0, 7, DISP_DEFAULT},
+	{"  Modulation Level", 2, 0, 15, DISP_DEFAULT},
 	{"Modulation Input X", 4, -16, 15, DISP_DEFAULT},
 	{" X Data Generation", 1, 0, 1, DISP_GENERATION},
 	{"Modulation Input Y", 4, -16, 15, DISP_DEFAULT},

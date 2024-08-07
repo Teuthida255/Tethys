@@ -18,7 +18,7 @@ Although Calypso implements the SCSP-DSP's features to a small extent, the parti
 
 Credits:
  -Developed by Teuthida (https://twitter.com/Teuthida256) ('Neosquid' on SegaXtreme)
- -Base Sound Driver Code: ponut64 (https://github.com/ponut64)
+ -Base Sound Driver Code by ponut64 (https://github.com/ponut64)
  -Made using the Jo Engine by Johannes Fetz (https://jo-engine.org/)
  -SCSP-DSP code documented by R. Belmont and Richard Bannister's Audio Overload SDK (https://github.com/nmlgc/aosdk)
 
@@ -31,4 +31,5 @@ Special Thanks:
  -acrouzet (program testing and moral support)
  -Euly (program testing)
  -ChiptunedRaijin (program testing)
+ -StinkerB06 (error correction)
  
