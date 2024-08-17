@@ -164,7 +164,8 @@ typedef struct {
 
 typedef struct {
     signed short coef[64];
-    unsigned short madrs[64];
+    unsigned short madrs[32];
+    unsigned short blank[32];
     unsigned short program[512]; // 128 4-word instructions
 } _DSPR; // SCSP DSP Register
 
@@ -431,8 +432,10 @@ void driver_data_init(void) {
     last_shift = a >> 4;
   }
 
+  /*
   // Load test effects data
   // SendLvl
+  dsp->coef[1] = 0x7D00
   // MPY INREG00 SendLvl
   dsp->program[0] = 0x0000; 
   dsp->program[1] = 0xA800;
@@ -443,7 +446,7 @@ void driver_data_init(void) {
   dsp->program[5] = 0x0000;
   dsp->program[6] = 0x1000;
   dsp->program[7] = 0x0000;
-
+  */
   // Set start to a specific number to communicate the driver has initialized
   sh2Com->start = 0x7777;
 }

@@ -1632,6 +1632,28 @@ void			load_drv(int master_adx_frequency)
 		addressBounds[i][0] = 0;
 		addressBounds[i][1] = 0xFFFF;
 	}
+
+	GfsHn s_gfs;
+	Sint32 file_size;
+
+	Sint32 local_name = GFS_NameToId((Sint8*)"BASIC.EFF");
+
+	// Open GFS
+	s_gfs = GFS_Open((Sint32)local_name);
+	// Get file information (mostly, the file size)
+	GFS_GetFileInfo(s_gfs, NULL, NULL, &file_size, NULL);
+
+	GFS_Close(s_gfs);
+
+	GFS_Load(local_name, 0, (void*)(0x25B00700), file_size);
+
+	// Write each set of DSP coefficients to the main struct
+	for (i = 0; i < NUM_COEFFICIENTS; i++) {
+		base_coefficients[i] = (*(short*)(0x25B00700 + (2 * (1 + i)))) / 8;
+	}
+	for (i = 0; i < NUM_ADDRESSES; i++) {
+		base_addresses[i] = (*(short*)(0x25B00780 + (2 * (i))));
+	}
 }
 
 unsigned short	calculate_bytes_per_blank(int sampleRate, Bool is8Bit, Bool isPAL)
