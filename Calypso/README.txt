@@ -31,5 +31,5 @@ Special Thanks:
  -acrouzet (program testing and moral support)
  -Euly (program testing)
  -ChiptunedRaijin (program testing)
- -StinkerB06 (error correction)
+ -The Beesh-Spweesh (error correction)
  
