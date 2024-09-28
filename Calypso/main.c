@@ -768,9 +768,13 @@ void init_option_values() {
 	}
 
 	if (CALYPSO_DEBUG) {
-		option_values[EDITOR_INST][0][INST_VOLUME] = 0;
-		option_values[EDITOR_INST][0][INST_EFFECT_VOLUME] = 7;
-		option_values[EDITOR_INST][0][INST_INPUT_VOLUME] = 4;
+		option_values[EDITOR_INST][0][INST_PATCHLENGTH] = 7;
+		for (short i = 0; i < 8; i++) {
+			for (short j = 0; j < INS_MACROS_MAX; j++) {
+				option_values[EDITOR_INST][i][INST_MACRO + j] = 1;
+			}
+		}
+		
 	}
 }
 
@@ -1476,7 +1480,7 @@ option_page sample_editor = { sample_options, NUM_PCM_OPTIONS, 0, &sample_option
 option_page multi_editor = { multi_options, NUM_MULT_OPTIONS, 0, &multi_option, NUM_MULTIS, 0 };
 option_page instrument_editor = { options, NUM_INST_OPTIONS, 0, &instrument_option, NUM_INSTRUMENTS, 0 };
 option_page macro_editor = { macro_options, NUM_MACR_OPTIONS, 0, &macro_option, NUM_MACROS, 0 };
-option_page channel_editor = { channel_options, NUM_CHAN_OPTIONS, 0, &channel_option, 1, 0 };
+option_page channel_editor = { channel_options, NUM_CHAN_OPTIONS, 0, &channel_option, 0, 1 };
 option_page* editors[NUM_EDITORS] = { &multi_editor, &sample_editor, &instrument_editor, &macro_editor, &channel_editor };
 
 void write_option_values_and_update(void) {
@@ -1931,8 +1935,8 @@ void			my_draw(void)
 		bool move_up = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_UP) : jo_is_input_key_down(0, JO_KEY_UP);
 		bool move_down = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_DOWN) : jo_is_input_key_down(0, JO_KEY_DOWN);
 		
-		bool instrument_left = false;
-		bool instrument_right = false;
+		bool selector_left = false;
+		bool selector_right = false;
 
 		bool octave_up = false;
 		bool octave_down = false;
@@ -1956,8 +1960,8 @@ void			my_draw(void)
 
 		short new_editor = current_editor;
 		if (!using_keyboard) {
-			instrument_left = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_L) : jo_is_input_key_down(0, JO_KEY_L);
-			instrument_right = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_R) : jo_is_input_key_down(0, JO_KEY_R);
+			selector_left = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_L) : jo_is_input_key_down(0, JO_KEY_L);
+			selector_right = (while_pressed) ? jo_is_input_key_pressed(0, JO_KEY_R) : jo_is_input_key_down(0, JO_KEY_R);
 
 			if (jo_is_input_key_down(0, JO_KEY_Z)) {
 				new_editor = offsetWithClamp(current_editor, 1, 0, NUM_EDITORS - 1);
@@ -1971,8 +1975,8 @@ void			my_draw(void)
 				move_right = false;
 				move_up = false;
 				move_down = false;
-				instrument_left = false;
-				instrument_right = false;
+				selector_left = false;
+				selector_right = false;
 				should_write = true;
 			}
 
@@ -1998,8 +2002,8 @@ void			my_draw(void)
 			}
 			if (is_special_key_pressed(KEY_TAB)) {
 				
-				instrument_left = (while_pressed) ? is_special_key_pressed(KEY_LEFT) : is_special_key_down(KEY_LEFT);
-				instrument_right = (while_pressed) ? is_special_key_pressed(KEY_RIGHT) : is_special_key_down(KEY_RIGHT);
+				selector_left = (while_pressed) ? is_special_key_pressed(KEY_LEFT) : is_special_key_down(KEY_LEFT);
+				selector_right = (while_pressed) ? is_special_key_pressed(KEY_RIGHT) : is_special_key_down(KEY_RIGHT);
 
 				if (jo_is_input_key_down(0, JO_KEY_DOWN)) {
 					new_editor = offsetWithClamp(current_editor, 1, 0, NUM_EDITORS - 1);
@@ -2075,14 +2079,15 @@ void			my_draw(void)
 
 		short cursor_move_amount = (coarse) ? OPTIONS_PER_PAGE : 1;
 
-		bool changed_instrument = false;
+		bool changed_selector = false;
 		bool changed_patchlength = false;
 
-		if (instrument_left || instrument_right) {
-			short new_instrument = offset_option(selector, editor->current_selector, instrument_left, coarse, 0, false);
-			if (new_instrument != editor->current_selector) {
-				editor->current_selector = new_instrument;
-				changed_instrument = true;
+		if ((selector_left || selector_right) && current_editor != EDITOR_CHAN) {
+			short new_selector = offset_option(selector, editor->current_selector, selector_left, coarse, 0, false);
+			test = new_selector;
+			if (new_selector != editor->current_selector) {
+				editor->current_selector = new_selector;
+				changed_selector = true;
 				should_write = true;
 			}
 		}
@@ -2303,7 +2308,7 @@ void			my_draw(void)
 		}
 
 
-		if (changed_instrument || cut_sound || changed_patchlength) {
+		if (changed_selector || cut_sound || changed_patchlength) {
 			chn_cease_all();
 			for (short i = 0; i < NUM_CHANNELS; i++) {
 				jam_channels[i].play_state = 0;
@@ -2398,7 +2403,7 @@ void			my_draw(void)
 		else {
 			/* Simple debug info*/
 			jo_clear_screen_line(26);
-			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test_func(0), test_func(1), test_func(2), test_func(3));
+			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test, test_func(1), test_func(2), test_func(3));
 			jo_clear_screen_line(27);
 			jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
 			jo_clear_screen_line(28);

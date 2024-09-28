@@ -467,7 +467,7 @@ Data Length (0x0000 to 0xFFFF, only appears if 'Value Length' is set to 'Single'
 The Channel Editor lives one layer down (Tab + Down on a keyboard and Z on a controller) from the Macro Editor. At the moment, it is of the most use to controller users, where it is the only way to change the current note, but all control schemes can lower and raise the playback volume.
 
 Note (c-8 to B-7):
- If using a controller, this changes the current note being played; otherwise, it doesn nothing.
+ If using a controller, this changes the current note being played; otherwise, it does nothing.
 
 Velocity (0 to 255):
  Controls the volume of the Channels, such that a value of 0 silences them and a value of 255 plays them at full volume (although they are still limited to the maximum volume of the currently playing Instruments).

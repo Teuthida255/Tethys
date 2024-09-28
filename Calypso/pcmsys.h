@@ -63,7 +63,7 @@
 #define MLT_CTRL_LENGTH_MAX (63)
 #define MCR_CTRL_MAX (0x7F)
 #define MCR_CTRL_LENGTH_MAX (250)
-#define INS_MACROS_MAX (4)
+#define INS_MACROS_MAX (8)
 //////////////////////////////////////////////////////////////////////////////
 #define CHN_INHERIT_MIN (0x401) // Bounds for the 'inherit' instrument
 #define CHN_INHERIT_MAX (0x407) // that borrows values from adjacent channels for FM patches
