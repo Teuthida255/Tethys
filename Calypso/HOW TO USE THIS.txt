@@ -46,7 +46,7 @@ You can save or load data in Calypso by pressing Q or E (with a keyboard) or L o
 
 --PLAYING NOTES--
 
-When using a controller, only one note can be played at a time (by holding A), and the pitch of this note can only be changed through the Channel Editor. While using the keyboard, most keys now map to different notes, allowing for chords and polyphonic lines. The mapping used is adapted from 0CC-FamiTracker's keyboard, and resembles two piano keyboards superimposed on top of the two halves of the computer keyboard:
+When using a controller, only one note can be played at a time (by holding A), and the pitch of this note can only be changed through the Channel Editor. While using the keyboard, most keys now map to different notes, allowing for chords and polyphonic lines. The mapping used is adapted from 0CC-FamiTracker's keyboard, and resembles two piano keyboards superimposed on top of the two halves of the QWERTY computer keyboard:
  Key  | Note   Key  | Note
  -----------   -----------  
   Z   | C-0     Q   | C-1  
@@ -117,7 +117,7 @@ Cent Detune* (-100 to 99):
  Detunes the Instrument by the given number of cents, such that the highest possible value offsets the pitch by about a semitone. Useful for microtonality or pitch slides, but isn't guaranteed to change the final value of the pitch register.
 
 Register Detune* (-0x4000 to 0x4000):
- Directly raises or lowers the Channel's calculated pitch register value by the given value. Although that is inadequate for microtonality (as any FamiTracker user can attest to), the fact that it always detunes the Instrument makes it useful for creating phasing effects in a Patch.
+ Directly raises or lowers the Channel's calculated pitch register value by the given value. Although this is inadequate for microtonality (as any FamiTracker user can attest to), the fact that it always detunes the Instrument makes it useful for creating phasing effects in a Patch.
 
 
 Hold Mode (On/Off):
@@ -170,7 +170,7 @@ Ignore Velocity* (On/Off):
  If On, the Instrument will be unaffected by its Channel's 'Velocity' parameter, and will always play at its given 'Total Level' value. This feature is primarily intended for creating FM Patches; the 'MAKING FM INSTRUMENTS' section later in this document will cover this in more detail.
 
 Modulation Level (0 to 15):
- Determines how much the Instrument should be frequency modulated by its modulation inputs. A value of 4 or below disables modulation entirely and 15 represents the highest level of modulation, although I've found that only values above 4 produce any noticeable difference in sound. To read more on this parameter, go to the 'MAKING FM INSTRUMENTS' section later in this document.
+ Determines how much the Instrument should be frequency modulated by its modulation inputs. A value of 4 or below disables modulation entirely and 15 represents the highest level of modulation. To read more on this parameter, go to the 'MAKING FM INSTRUMENTS' section later in this document.
 
 Modulation Input X (-16 to 15):
 Modulation Input Y (-16 to 15):
@@ -195,13 +195,15 @@ Effect Volume (0 to 7):
 Effect Pan (-15 to 15):
  Controls the panning of the Instrument's effects output, with the same controls as its Direct Volume equivalent.
 
+(As a brief aside, the above two mixing parameters are tied not to the channel sending input audio, but to an output slot on the DSP; the first channel's mixing data affects the first output slot, the second channel affects the second output slot, and so on. Although this means that there is no corellation between an Instrument's effect mixing values and how loud the DSP will play it, Calypso sidesteps this issue by assigning the values 'Effect Volume' and 'Effect Pan' to all 16 output slots.)
+
 Effect Slot (0 to 15):
  Determines which of the 16 DSP input slots the Instrument's sound data should be sent to, which decides how the DSP program will operate on it.
 
 Input Level (0 to 7):
  Sets the volume of the audio data sent by the Instrument to the DSP, with 7 being the maximum volume and 0 preventing the audio from going through the effects module entirely. Overly-high values can distort the audio, albeit in a different way than traditional 'brick wall' clipping.
 
-(Important note for effect parameters: Due to the inherent complexity of the feature and the inherent simplicity of the program, Calypso's DSP support is intentionally quite barebones, with the DSP program consisting of a simple volume change on input slot 0. The effects parameters are included for completeness's sake, rather than musical effect; that being said, expect a similar, DSP-focused program sometime in the future.)
+(Important note for effect parameters: Due to the inherent complexity of the feature and the inherent simplicity of the program, Calypso's DSP support is intentionally quite barebones, with the DSP program consisting of a simple volume change on all of its input slots. The effects parameters are included for completeness's sake, rather than musical effect; that being said, expect a similar, DSP-focused program sometime in the future.)
 
 
 Macro ID (0 to 63, can also be disabled entirely):
@@ -392,17 +394,17 @@ The property a Macro affects is determined by its 'Type' parameter, which can be
 'LSCL' - Level Scaling (0 to 15):
  Affects the Instrument's 'Level Scaling' parameter, and functions identically to it.
 
-'EVOL' - Effect Volume (0 to 7):
- Affects the Instrument's 'Effect Volume' parameter, and functions identically to it.
-
-'EPAN' - Effect Pan (-15 to 15):
- Affects the Instrument's 'Effect Pan' parameter, and functions identically to it.
-
 'ESLT' - Effect Slot* (0 to 15):
  Affects the Instrument's 'Effect Slot' parameter, and functions identically to it.
 
 'ILVL' - Input Level (0 to 7):
  Affects the Instrument's 'Input Level' parameter, and functions identically to it.
+
+'EV00 to 'EV15' - Volume for Effect Outputs 00 through 15 (0 to 7):
+ Affects the volume of the corresponding DSP output slot, funtioning identically to an Instrument's 'Effect Volume' parameter, albeit with control over the volume of individual slots (This means that the effects of this macro will only be audible if the Instrument's 'Effect Slot' value routes it through the given output slot).
+
+'EP00 to 'EP15' - Panning for Effect Outputs 00 through 15 (-15 to 15):
+ Affects the panning of the corresponding DSP output slot, funtioning identically to an Instrument's 'Effect Pan' parameter, albeit with control over the volume of individual slots (This means that the effects of this macro will only be audible if the Instrument's 'Effect Slot' value routes it through the given output slot).
 
 'EC01' to 'EC63' - Effect Coefficient 01 through 63 (-4096 to 4096):
  Affects the given DSP coefficient (of which there is currently only one in use). Unlike the other Macro types, DSP coefficients are shared by all Channels, so care must be taken to avoid conflicts between Macros that modify the same coefficient.
@@ -443,7 +445,7 @@ Allow Overflow (Off/On):
  If this parameter is on and the Macro is Relative, offsetting the Macro's current value beyond its type's bounds will cause it to wrap around instead of begin clamped.
 
 Propagate Patches (Off/On):
- If the Instrument using this Macro is a Patch Leader and this parameter is on, the other Instruments in the Patch will be use the Macro as well (this Macro is used instead of whatever Macro was in that Instrument's slot, so this does not allow you to 'cheat' the 8 Macro per Instrument limit).
+ If the Instrument using this Macro is a Patch Leader and this parameter is on, the other Instruments in the Patch will use the Macro as well (this Macro is used instead of whatever Macro was in that Instrument's slot, so this does not allow you to 'cheat' the 8 Macro per Instrument limit).
 
 Macro Length (0 to 250):
  Determines how many values will be in the Macro.
@@ -467,10 +469,10 @@ Data Length (0x0000 to 0xFFFF, only appears if 'Value Length' is set to 'Single'
 The Channel Editor lives one layer down (Tab + Down on a keyboard and Z on a controller) from the Macro Editor. At the moment, it is of the most use to controller users, where it is the only way to change the current note, but all control schemes can lower and raise the playback volume.
 
 Note (c-8 to B-7):
- If using a controller, this changes the current note being played; otherwise, it does nothing.
+ If using a controller, this changes the current note being played; otherwise, it just displays the note being played by the first Channel.
 
 Velocity (0 to 255):
- Controls the volume of the Channels, such that a value of 0 silences them and a value of 255 plays them at full volume (although they are still limited to the maximum volume of the currently playing Instruments).
+ Controls the volume of the Channels, such that a value of 0 silences them and a value of 255 plays them at full volume (although they are still limited to the maximum volume of the currently playing Instruments). If the current Instrument is set to ignore Velocity changes, this parameter does nothing.
 
 Channel Volume (0 to 255):
  Currently identical to 'Velocity' in function.
@@ -497,7 +499,7 @@ I'm producing all this verbiage, of course, to provide some grounding why Calyps
 
 --ACTUALLY MAKING FM INSTRUMENTS--
 
-The key to creating FM in Calypso is the 'Patch Length' parameter in the Instrument Editor. When this parameter is set to something other than 0, it will recruit that many additional Instruments after the current one to be keyed on and off with it; as an example, if Instrument 06 has a 'Patch Length' of 3 and plays in channel 1, then Instrument 07 will play in channel 2, Instrument 08 will play in channel 3, and Instrument 09 will play in channel 4 simultaneously, and the reverse will happen once Instrument 06 stops playing. Moreover, each of these Instruments will borrow their note value from the 'patch leader', and will inherit any Macro's with the 'Propagate Patches' parameter in it. This is the closest the SCSP can get to an 'FM patch' while still respecting the hardware's features, and will be called a 'Patch' (note the capital P) to distinguish it from the """authentic""" patches of its peers.
+The key to creating FM in Calypso is the 'Patch Length' parameter in the Instrument Editor. When this parameter is set to something other than 0, it will recruit that many additional Instruments after the current one to be keyed on and off with it; as an example, if Instrument 06 has a 'Patch Length' of 3 and plays in channel 1, then Instrument 07 will play in channel 2, Instrument 08 will play in channel 3, and Instrument 09 will play in channel 4 simultaneously, and the reverse will happen once Instrument 06 stops playing. Moreover, each of these Instruments will borrow their note value from the 'patch leader', and will inherit any Macros with the 'Propagate Patches' parameter in it. This is the closest the SCSP can get to an 'FM patch' while still respecting the hardware's features, and will be called a 'Patch' (note the capital P) to distinguish it from the """authentic""" patches of its peers.
 
 The next step to shaping your Patch is to decide which of your Instruments will act as 'modulators' (Instruments that modulate other Instruments and aren't audible beyond that), which will act as 'carriers' (Instruments that are modulated by the modulators, output their audio from the SCSP, and don't modulate anything else). This is a false distinction on the SCSP, as there's nothing stopping an Instrument from modulating and being heard at the same time, but it's a useful one for the purposes of this guide.
 

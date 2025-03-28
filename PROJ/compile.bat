@@ -4,3 +4,4 @@ SET PATH=%COMPILER_DIR%;%cd%
 make -f makefile srcs
 SET PATH=%TEMP_PATH%
 COPY sdrv.bin "..\Calypso\cd"
+COPY sdrv.bin "..\Telesto\cd"

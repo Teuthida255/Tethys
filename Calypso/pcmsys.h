@@ -82,6 +82,7 @@
 #define MACRO_AT_RELEASE 0xFE
 #define MACRO_UNINITIALIZED 0xFD
 //////////////////////////////////////////////////////////////////////////////
+#define NUM_EFFECT_SLOTS 16
 #define NUM_COEFFICIENTS 63
 #define NUM_ADDRESSES 32
 //////////////////////////////////////////////////////////////////////////////
@@ -137,7 +138,7 @@
 #define ADX_1920_COEF_2 (-2469)
 
 #define NUM_MACRO_TYPES 36
-#define NUM_MACRO_TYPES_NONUNIQUE (NUM_MACRO_TYPES - 2 + 63 + 32 - 1)
+#define NUM_MACRO_TYPES_NONUNIQUE (NUM_MACRO_TYPES - 2 + 63 + 32 + 32 - 1)
 enum macro_types {
 	MACRO_KEYON = 0,
 	MACRO_SAMPLETRAITS = 1,
@@ -164,17 +165,17 @@ enum macro_types {
 	MACRO_PITCHMULTIPLIER = 22,
 	MACRO_PITCHDIVIDER = 23,
 	MACRO_LEVELSCALING = 24,
-	MACRO_EFFECTVOLUME = 25,
-	MACRO_INPUTLEVEL = 26,
-	MACRO_PAN = 27,
-	MACRO_NOTEOFFSET = 28,
-	MACRO_CENTDETUNE = 29,
-	MACRO_REGISTERDETUNE = 30,
-	MACRO_MODINPUTX = 31,
-	MACRO_MODINPUTY = 32,
-	MACRO_EFFECTPAN = 33,
-	MACRO_EFFECTCOEF = 34,
-	MACRO_EFFECTADRS = 34 + 63,
+	MACRO_INPUTLEVEL = 25,
+	MACRO_PAN = 26,
+	MACRO_NOTEOFFSET = 27,
+	MACRO_CENTDETUNE = 28,
+	MACRO_REGISTERDETUNE = 29,
+	MACRO_MODINPUTX = 30,
+	MACRO_MODINPUTY = 31,
+	MACRO_EFFECTVOLUME = 32,
+	MACRO_EFFECTPAN = MACRO_EFFECTVOLUME + NUM_EFFECT_SLOTS,
+	MACRO_EFFECTCOEF = MACRO_EFFECTPAN + NUM_EFFECT_SLOTS,
+	MACRO_EFFECTADRS = MACRO_EFFECTCOEF + NUM_COEFFICIENTS,
 };
 #define FIRST_RELATIVE MACRO_SAMPLEOFFSET
 #define FIRST_SIGNED MACRO_PAN
@@ -229,8 +230,6 @@ enum macro_types {
 #define MACRO_PITCHDIVIDER_UBOUND 0xFF
 #define MACRO_LEVELSCALING_LBOUND 0
 #define MACRO_LEVELSCALING_UBOUND 0xF
-#define MACRO_EFFECTVOLUME_LBOUND 0
-#define MACRO_EFFECTVOLUME_UBOUND 7
 #define MACRO_INPUTLEVEL_LBOUND 0
 #define MACRO_INPUTLEVEL_UBOUND 7
 #define MACRO_PAN_LBOUND -15
@@ -245,6 +244,8 @@ enum macro_types {
 #define MACRO_MODINPUTX_UBOUND 47
 #define MACRO_MODINPUTY_LBOUND -15
 #define MACRO_MODINPUTY_UBOUND 47
+#define MACRO_EFFECTVOLUME_LBOUND 0
+#define MACRO_EFFECTVOLUME_UBOUND 7
 #define MACRO_EFFECTPAN_LBOUND -15
 #define MACRO_EFFECTPAN_UBOUND 15
 #define MACRO_EFFECTCOEF_LBOUND -4096
@@ -369,7 +370,7 @@ typedef struct {
 	unsigned char loop_2;  // Start of the macro's second loop point
 	unsigned char release; // Start of the macro's release point
 	unsigned short data[MCR_CTRL_LENGTH_MAX]; // Data in the macro (will be interpreted differently depending on the type and traits)
-} _MCR_CTRL; // Driver macro Data Struct
+} _MCR_CTRL; // Driver Macro Data Struct
 
 typedef struct {
 	volatile unsigned int adx_stream_length; // Length of the ADX stream (in ADX frames)
@@ -380,6 +381,7 @@ typedef struct {
 	volatile _CHN_CTRL* chnCtrl;
 	volatile unsigned char cdda_left_channel_vol_pan; // Redbook left channel volume & pan.
 	volatile unsigned char cdda_right_channel_vol_pan; // Redbook right channel volume & pan.
+	volatile unsigned char effect_levels[NUM_EFFECT_SLOTS]; // DSP Output Volume and Pan
 	volatile short coefficients[NUM_COEFFICIENTS]; // DSP Coefficients
 	volatile short addresses[NUM_ADDRESSES];  // DSP Addresses
 } sysComPara;
@@ -408,6 +410,8 @@ extern _INS_CTRL insCtrl[INS_CTRL_MAX];
 extern _PCM_CTRL pcmCtrl[PCM_CTRL_MAX];
 extern _MLT_CTRL mltCtrl[MLT_CTRL_MAX];
 extern _MCR_CTRL mcrCtrl[MCR_CTRL_MAX];
+extern unsigned char effect_levels[NUM_EFFECT_SLOTS];
+extern unsigned char effect_pans[NUM_EFFECT_SLOTS];
 extern short coefficients[NUM_COEFFICIENTS];
 extern unsigned short addresses[NUM_ADDRESSES];
 extern short base_coefficients[NUM_COEFFICIENTS];
@@ -504,7 +508,6 @@ void	ins_patchlength_change(short insNumber, unsigned char length);
 void	ins_mod_volume_change(short insNumber, char mod_volume);
 void	ins_mod_input_x_change(short insNumber, char mod_input, char generation);
 void	ins_mod_input_y_change(short insNumber, char mod_input, char generation);
-void	ins_effect_parameter_change(short insNumber, char volume, char pan);
 void	ins_effect_input_change(short insNumber, char level, char slot);
 void	ins_freq_ratio_change(short insNumber, unsigned char multiplier, unsigned char divider);
 void	ins_level_scaling_change(short insNumber, unsigned char scaling);
@@ -576,8 +579,11 @@ int		clamp_macro_value(int value, unsigned char type);
 int		overflow_macro_value(int value, unsigned char type);
 unsigned short get_initial_macro_value(unsigned char type, _INS_CTRL* instrument);
 
+void	dso_set_effect_levels(void);
 void	dsp_load_base_variables(void);
 void	dsp_set_variables(void);
+
+void	dsp_effect_parameter_change(short outNumber, char volume, char pan);
 
 void	chn_play(short chnNumber, char ctrlType, char volume);
 void	chn_play_melodic(short chnNumber);

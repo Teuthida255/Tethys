@@ -85,6 +85,7 @@ void lead_function(void) // Link start to main
 
 #define INS_MACROS_MAX 8
 
+#define NUM_EFFECT_SLOTS 16
 #define NUM_COEFFICIENTS 63
 #define NUM_ADDRESSES 32
 
@@ -244,6 +245,7 @@ typedef struct {
   volatile _CHN_CTRL* chnCtrl;
   volatile unsigned char cdda_left_channel_vol_pan;  // Redbook left channel volume & pan.
   volatile unsigned char cdda_right_channel_vol_pan; // Redbook right channel volume & pan.
+  volatile unsigned char effect_levels[NUM_EFFECT_SLOTS]; // DSP Output Volume and Pan
   volatile short coefficients[NUM_COEFFICIENTS];     // DSP Coefficients
   volatile unsigned short addresses[NUM_ADDRESSES];  // DSP Addresses
 } sysComPara;
@@ -262,6 +264,7 @@ short volatilePCMs[CHN_CTRL_MAX];
 short adxPCMs[CHN_CTRL_MAX];
 int dataTimers[32];
 short lfoTimers[32];
+unsigned short pan_sendBuffers[32];
 
 #define ADX_STATUS_NONE   (0)
 #define ADX_STATUS_ACTIVE (1)
@@ -589,9 +592,13 @@ void update_slot(volatile char cst, _CHN_CTRL* lctrl, short key_bit) {
     // "-1" to correct for the SCSP's pipeline. Helps that the linked library won't have to worry.
     slot->playsize = lctrl->playsize - 1;
 
-    slot->oct_fns = lctrl->final_pitch;
+    slot->oct_fns = lctrl->final_pitch; // This enables seamless FM waveforms without the need to pad the sample data
 
-    slot->pan_send = lctrl->pan_send;
+    // Effect volume and pan are actually global variables tied to half of the slots' effect registers
+    // As such, its value is drawn from an external table instead of the Channel's data
+    // and must be written to in full later
+    pan_sendBuffers[cst] = lctrl->pan_send;
+
     slot->attenuation = lctrl->attenuation;
     if ((lctrl->reset_bits & (1 << 1)) != 0) {
         lfo_bit = (lctrl->reset_bits >> 2) & 1;
@@ -609,6 +616,7 @@ void update_slot(volatile char cst, _CHN_CTRL* lctrl, short key_bit) {
 
     slot->FM_data = lctrl->FM_data;
     slot->input_sel = lctrl->input_sel;
+    //lctrl->test_area = sh2Com->effect_levels[cst];
 
     if (lfoTimers[cst] < (short)(lctrl->lfo_delay)) {
         lfoTimers[cst]++;
@@ -1499,6 +1507,15 @@ void pcm_control_loop(void) {
           play_volatile_sound(lctrl);
       }
   }
+  // Write effect levels to everything
+  for (short c = 0; c < 32; c++) { // hah
+      if (c < NUM_EFFECT_SLOTS) {
+        pan_sendBuffers[c] &= 0xff00;
+        pan_sendBuffers[c] |= sh2Com->effect_levels[c];
+      }
+      csr[c].pan_send = pan_sendBuffers[c];
+  }
+  
 
   csr[0].keys |= 1 << 12; // Keyon everything
 }

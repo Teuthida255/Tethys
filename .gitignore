@@ -32,6 +32,9 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Secrets
+Telesto/
+
 # Compile results
 game.cue
 game.iso

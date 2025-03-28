@@ -66,6 +66,8 @@ _INS_CTRL insCtrl[INS_CTRL_MAX];
 _PCM_CTRL pcmCtrl[PCM_CTRL_MAX];
 _MLT_CTRL mltCtrl[MLT_CTRL_MAX];
 _MCR_CTRL mcrCtrl[MCR_CTRL_MAX];
+unsigned char effect_levels[NUM_EFFECT_SLOTS];
+unsigned char effect_pans[NUM_EFFECT_SLOTS];
 short coefficients[NUM_COEFFICIENTS];
 unsigned short addresses[NUM_ADDRESSES];
 short base_coefficients[NUM_COEFFICIENTS];
@@ -99,7 +101,6 @@ const unsigned short macroBounds[NUM_MACRO_TYPES][2] = {
 	{MACRO_PITCHMULTIPLIER_LBOUND,MACRO_PITCHMULTIPLIER_UBOUND},
 	{MACRO_PITCHDIVIDER_LBOUND,MACRO_PITCHDIVIDER_UBOUND},
 	{MACRO_LEVELSCALING_LBOUND,MACRO_LEVELSCALING_UBOUND},
-	{MACRO_EFFECTVOLUME_LBOUND,MACRO_EFFECTVOLUME_UBOUND},
 	{MACRO_INPUTLEVEL_LBOUND,MACRO_INPUTLEVEL_UBOUND},
 	{MACRO_PAN_LBOUND,MACRO_PAN_UBOUND},
 	{MACRO_NOTEOFFSET_LBOUND,MACRO_NOTEOFFSET_UBOUND},
@@ -107,6 +108,7 @@ const unsigned short macroBounds[NUM_MACRO_TYPES][2] = {
 	{MACRO_REGISTERDETUNE_LBOUND,MACRO_REGISTERDETUNE_UBOUND},
 	{MACRO_MODINPUTX_LBOUND,MACRO_MODINPUTX_UBOUND},
 	{MACRO_MODINPUTY_LBOUND,MACRO_MODINPUTY_UBOUND},
+	{MACRO_EFFECTVOLUME_LBOUND,MACRO_EFFECTVOLUME_UBOUND},
 	{MACRO_EFFECTPAN_LBOUND,MACRO_EFFECTPAN_UBOUND},
 	{MACRO_EFFECTCOEF_LBOUND, MACRO_EFFECTCOEF_UBOUND},
 	{MACRO_EFFECTADRS_LBOUND, MACRO_EFFECTADRS_UBOUND},
@@ -498,12 +500,6 @@ void	ins_mod_input_y_change(short insNumber, char mod_input, char generation) {
 	insCtrl[insNumber].mod_input_y = mod_input | generation << 5;
 }
 
-void	ins_effect_parameter_change(short insNumber, char volume, char pan) {
-	if (insNumber < 0) return;
-	insCtrl[insNumber].effect_volume = volume;
-	insCtrl[insNumber].effect_pan = pan;
-}
-
 void	ins_effect_input_change(short insNumber, char level, char slot) {
 	if (insNumber < 0) return;
 	insCtrl[insNumber].input_volume = level;
@@ -694,7 +690,7 @@ void	chn_soft_reset_macros(short chnNumber) {
 }
 
 void		get_macro_bounds(unsigned char type, int* lbound, int* ubound) {
-	if (type < MACRO_EFFECTCOEF) {
+	if (type < MACRO_EFFECTVOLUME) {
 		if (type >= FIRST_SIGNED) {
 			*lbound = (short)macroBounds[type][0];
 			*ubound = (short)macroBounds[type][1];
@@ -705,13 +701,21 @@ void		get_macro_bounds(unsigned char type, int* lbound, int* ubound) {
 			*ubound = macroBounds[type][1];
 		}
 	}
-	else if (type >= MACRO_EFFECTADRS) {
-		*lbound = addressBounds[type - MACRO_EFFECTADRS][0];
-		*ubound = macroBounds[type - MACRO_EFFECTADRS][1];
+	else if (type < MACRO_EFFECTPAN) {
+		*lbound = (short)macroBounds[32][0];
+		*ubound = (short)macroBounds[32][1];
 	}
-	else {
+	else if (type < MACRO_EFFECTCOEF) {
+		*lbound = (short)macroBounds[33][0];
+		*ubound = (short)macroBounds[33][1];
+	}
+	else if (type < MACRO_EFFECTADRS) {
 		*lbound = coefficientBounds[type - MACRO_EFFECTCOEF][0];
 		*ubound = coefficientBounds[type - MACRO_EFFECTCOEF][1];
+	}
+	else {
+		*lbound = addressBounds[type - MACRO_EFFECTADRS][0];
+		*ubound = macroBounds[type - MACRO_EFFECTADRS][1];
 	}
 }
 
@@ -754,6 +758,9 @@ void	dsp_load_base_variables(void) {
 }
 
 void	dsp_set_variables(void) {
+	for (short i = 0; i < NUM_EFFECT_SLOTS; i++) {
+		m68k_com->effect_levels[i] = (effect_levels[i] << 5) | effect_pans[i];
+	}
 	for (short i = 0; i < NUM_COEFFICIENTS; i++) {
 		m68k_com->coefficients[i] = coefficients[i] * 8;
 	}
@@ -762,12 +769,23 @@ void	dsp_set_variables(void) {
 	}
 }
 
+void	dsp_effect_parameter_change(short outNumber, char volume, char pan) {
+	effect_levels[outNumber] = volume;
+	effect_pans[outNumber] = pan;
+}
+
 unsigned short	get_initial_macro_value(unsigned char type, _INS_CTRL* instrument) {
 	if (type >= MACRO_EFFECTADRS) {
 		return base_addresses[type - MACRO_EFFECTADRS];
 	}
 	else if (type >= MACRO_EFFECTCOEF) {
 		return base_coefficients[type - MACRO_EFFECTCOEF];
+	}
+	else if (type >= MACRO_EFFECTPAN) {
+		return instrument->effect_pan;
+	}
+	else if (type >= MACRO_EFFECTVOLUME) {
+		return instrument->effect_volume;
 	}
 	else {
 		switch (type) {
@@ -807,8 +825,6 @@ unsigned short	get_initial_macro_value(unsigned char type, _INS_CTRL* instrument
 			return instrument->loopstart_offset & 0xFF;
 		case MACRO_LEVELSCALING:
 			return instrument->loopstart_offset & 0xF;
-		case MACRO_EFFECTVOLUME:
-			return instrument->effect_volume;
 		case MACRO_INPUTLEVEL:
 			return instrument->input_volume;
 		case MACRO_PAN:
@@ -823,8 +839,6 @@ unsigned short	get_initial_macro_value(unsigned char type, _INS_CTRL* instrument
 			return instrument->mod_input_x;
 		case MACRO_MODINPUTY:
 			return instrument->mod_input_y;
-		case MACRO_EFFECTPAN:
-			return (instrument->effect_pan < 0x10) ? -instrument->effect_pan : (instrument->effect_pan - 0x10);
 		default:
 			return 0;
 		}
@@ -1116,7 +1130,6 @@ void	chn_set_values(short chnNumber) {
 		jo_set_default_background_color(JO_COLOR_DarkYellow);
 	}*/
 	if (chnNumber < 0) return;
-	chnCtrl[chnNumber].test_area = chnCtrl[chnNumber].melodic_data;
 	short insNumber = chn_get_current_instrument(chnNumber);
 	short patchLeaderChnNumber = chnNumber;
 	short patchLeaderInsNumber = insNumber;
@@ -1136,12 +1149,9 @@ void	chn_set_values(short chnNumber) {
 
 	channel->key_data = (loop_type << 5) | ((sample->bitDepth % 2) << 4) | (instrument->bit_reverse << 9) | (instrument->noise_mode << 7);
 
-	// chnCtrl's volume is used here instead of the instrument for Reasons (supporting poneSound's direct-only volume control)
-	Bool useInsVolume = (channel->volume == 0);
-	if (useInsVolume) {
-		channel->volume = instrument->volume;
-	}
-	channel->pan_send = channel->volume << 13 | instrument->pan << 8 | instrument->effect_volume << 5 | instrument->effect_pan;
+	// Effect volume and pan are actually global values that affect the entire DSP slot and must be handled separately
+	channel->pan_send = instrument->volume << 13 | instrument->pan << 8;
+	
 	channel->lfo_data = (instrument->lfo_amp) | (instrument->lfo_pitch << 5) | (instrument->lfo_freq << 10);
 	if (instrument->use_envelope != 0) {
 		channel->decay_1_2_attack = instrument->attack_hold | instrument->decay1 << 6 | instrument->decay2 << 11;
@@ -1152,10 +1162,6 @@ void	chn_set_values(short chnNumber) {
 		// panning. Attenuation, bit 9 [SD].
 		channel->decay_1_2_attack = 31;
 		channel->key_decay_release = 31;
-	}
-	// Set the volume back for future reuse
-	if (useInsVolume) {
-		channel->volume = 0;
 	}
 
 	channel->FM_data = instrument->mod_input_y | instrument->mod_input_x << 6 | instrument->mod_volume << 12;
@@ -1210,6 +1216,18 @@ void	chn_set_values(short chnNumber) {
 					}
 					else if (macro->type >= MACRO_EFFECTCOEF) {
 						coefficients[macro->type - MACRO_EFFECTCOEF] = (short)channel->macro_values[i];
+					}
+					else if (macro->type >= MACRO_EFFECTPAN) {
+						short pan_value = (short)channel->macro_values[i];
+						if (pan_value > 0)
+							pan_value += 0x10;
+						else
+							pan_value *= -1;
+						effect_pans[macro->type - MACRO_EFFECTPAN] = (unsigned char)pan_value;
+					}
+					else if (macro->type >= MACRO_EFFECTVOLUME) {
+						effect_levels[macro->type - MACRO_EFFECTVOLUME] = (unsigned char)channel->macro_values[i];
+						chnCtrl[chnNumber].test_area = (unsigned short)(channel->macro_timers[i]);
 					}
 					else {
 						short value_buffer = 0;
@@ -1307,10 +1325,6 @@ void	chn_set_values(short chnNumber) {
 							channel->FM_data &= (0xFFFF >> (16 - 12));
 							channel->FM_data |= macro_value << 12;
 							break;
-						case MACRO_EFFECTVOLUME:
-							channel->pan_send &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 8));
-							channel->pan_send |= macro_value << 5;
-							break;
 						case MACRO_INPUTLEVEL:
 							channel->input_sel &= (0xFFFF << 3);
 							channel->input_sel |= macro_value;
@@ -1349,15 +1363,6 @@ void	chn_set_values(short chnNumber) {
 						case MACRO_MODINPUTY:
 							channel->FM_data &= (0xFFFF << 6);
 							channel->FM_data |= ((unsigned short)(macro_value + 0x10));
-							break;
-						case MACRO_EFFECTPAN:
-							value_buffer = (short)macro_value;
-							if (value_buffer > 0)
-								value_buffer += 0x10;
-							else
-								value_buffer *= -1;
-							channel->pan_send &= (0xFFFF << 5);
-							channel->pan_send |= ((unsigned short)value_buffer);
 							break;
 						}
 					}
@@ -1410,7 +1415,6 @@ void	chn_set_values(short chnNumber) {
 	channel->start_addr = (unsigned short)address;
 	channel->LSA = loop;
 	channel->playsize = playsize;
-	channel->test_area = (unsigned short)address;
 
 	//jo_set_default_background_color(JO_COLOR_DarkYellow);
 	/*if ((short)m68k_com->start - 2 < chnNumber) {
@@ -1622,6 +1626,10 @@ void			load_drv(int master_adx_frequency)
 	numberInsts = 0;
 	numberPCMs = 0;
 
+	for (i = 0; i < NUM_EFFECT_SLOTS; i++) {
+		effect_levels[i] = 0;
+		effect_pans[i] = 0;
+	}
 	for (i = 0; i < NUM_COEFFICIENTS; i++) {
 		base_coefficients[i] = 4000;
 		coefficientBounds[i][0] = -4096;
@@ -1636,7 +1644,7 @@ void			load_drv(int master_adx_frequency)
 	GfsHn s_gfs;
 	Sint32 file_size;
 
-	Sint32 local_name = GFS_NameToId((Sint8*)"BASIC.EFF");
+	Sint32 local_name = GFS_NameToId((Sint8*)"ALLIO.EFF");
 
 	// Open GFS
 	s_gfs = GFS_Open((Sint32)local_name);
@@ -2062,6 +2070,7 @@ short	init_sequenced_channels(short numChannels) {
 	}
 	for (int i = 0; i < numChannels; i++) {
 		chn_set_melodic_data(i, i);
+		chnCtrl[i].sh2_permit = 1;
 	}
 	numberChans = numChannels;
 	return numberChans;

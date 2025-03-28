@@ -3,10 +3,10 @@
 #ifndef __TETHYS_SAMPLE_DATA_H__
 # define __TETHYS_SAMPLE_DATA_H__
 
-// Write the number of samples you want to use here
+// Write the number of Samples you want to use here
 // 32 is the maximum for this testing program
 #define NumberOfSamples 32
-// Write a 0 here instead of a 1 to disable the default multi-sample values
+// Write a 0 here instead of a 1 to disable the default Multisample values
 // Turn this off if you plan on using a different layout for your samples
 #define UseDefaultMultiSamples 1
 

@@ -15,7 +15,7 @@ int framerate;
 #define NUM_MULTIS (NUM_SAMPLES)
 #define NUM_MACROS (63)
 #define NUM_INSTRUMENTS (64)
-#define NUM_CHANNELS 32
+#define NUM_CHANNELS (32)
 #define NUM_EDITORS 5
 
 #define MAX_SLOTS 0x40
@@ -188,10 +188,40 @@ const char* MACRO_TYPE_NAMES[] = {
 	"PMUL",
 	"PDIV",
 	"LSCL",
-	"EVOL",
-	"EPAN",
 	"ESLT",
 	"ILVL",
+	"EV00",
+	"EV01",
+	"EV02",
+	"EV03",
+	"EV04",
+	"EV05",
+	"EV06",
+	"EV07",
+	"EV08",
+	"EV09",
+	"EV10",
+	"EV11",
+	"EV12",
+	"EV13",
+	"EV14",
+	"EV15",
+	"EP00",
+	"EP01",
+	"EP02",
+	"EP03",
+	"EP04",
+	"EP05",
+	"EP06",
+	"EP07",
+	"EP08",
+	"EP09",
+	"EP10",
+	"EP11",
+	"EP12",
+	"EP13",
+	"EP14",
+	"EP15",
 	"EC01",
 	"EC02",
 	"EC03",
@@ -320,10 +350,42 @@ const short MACRO_TYPE_TO_INTERNAL[] = {
 	MACRO_PITCHMULTIPLIER,
 	MACRO_PITCHDIVIDER,
 	MACRO_LEVELSCALING,
-	MACRO_EFFECTVOLUME,
-	MACRO_EFFECTPAN,
 	MACRO_EFFECTSLOT,
 	MACRO_INPUTLEVEL,
+
+	MACRO_EFFECTVOLUME + 0,
+	MACRO_EFFECTVOLUME + 1,
+	MACRO_EFFECTVOLUME + 2,
+	MACRO_EFFECTVOLUME + 3,
+	MACRO_EFFECTVOLUME + 4,
+	MACRO_EFFECTVOLUME + 5,
+	MACRO_EFFECTVOLUME + 6,
+	MACRO_EFFECTVOLUME + 7,
+	MACRO_EFFECTVOLUME + 8,
+	MACRO_EFFECTVOLUME + 9,
+	MACRO_EFFECTVOLUME + 10,
+	MACRO_EFFECTVOLUME + 11,
+	MACRO_EFFECTVOLUME + 12,
+	MACRO_EFFECTVOLUME + 13,
+	MACRO_EFFECTVOLUME + 14,
+	MACRO_EFFECTVOLUME + 15,
+
+	MACRO_EFFECTPAN + 0,
+	MACRO_EFFECTPAN + 1,
+	MACRO_EFFECTPAN + 2,
+	MACRO_EFFECTPAN + 3,
+	MACRO_EFFECTPAN + 4,
+	MACRO_EFFECTPAN + 5,
+	MACRO_EFFECTPAN + 6,
+	MACRO_EFFECTPAN + 7,
+	MACRO_EFFECTPAN + 8,
+	MACRO_EFFECTPAN + 9,
+	MACRO_EFFECTPAN + 10,
+	MACRO_EFFECTPAN + 11,
+	MACRO_EFFECTPAN + 12,
+	MACRO_EFFECTPAN + 13,
+	MACRO_EFFECTPAN + 14,
+	MACRO_EFFECTPAN + 15,
 
 	MACRO_EFFECTCOEF + 0,
 	MACRO_EFFECTCOEF + 1,
@@ -632,6 +694,22 @@ jam_channel jam_channels[NUM_CHANNELS] = {
 	{0, -1, -1, 0},
 	{0, -1, -1, 0},
 	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
+	{0, -1, -1, 0},
 };
 
 void set_jam_channel(jam_channel* channels, short index, short note, short scancode, short patchlength) {
@@ -701,7 +779,7 @@ short inst_option_defaults[NUM_INST_OPTIONS] = {
 	0,			// INST_EFFECT_VOLUME
 	0,			// INST_EFFECT_PAN
 	0,			// INST_EFFECT_SLOT
-	0,			// INST_INPUT_VOLUME
+	4,			// INST_INPUT_VOLUME
 	0,			// INST_MACRO
 	0,
 	0,
@@ -760,30 +838,20 @@ void init_option_values() {
 		option_values[EDITOR_MULT][1][MULT_NOTE_OVERRIDE] = 0;
 		option_values[EDITOR_MULT][1][MULT_LENGTH] = 2;
 
-		option_values[EDITOR_MULT][1][MULT_DATA + 0] = 12;  // C-0
-		option_values[EDITOR_MULT][1][MULT_DATA + 1] = 12;  // C#0
-		option_values[EDITOR_MULT][1][MULT_DATA + 2] = 13;  // D-0
-		option_values[EDITOR_MULT][1][MULT_DATA + 3] = 36;  // D#0
-		option_values[EDITOR_MULT][1][MULT_DATA + 4] = 14;  // E-0
-	}
-
-	if (CALYPSO_DEBUG) {
-		option_values[EDITOR_INST][0][INST_PATCHLENGTH] = 7;
-		for (short i = 0; i < 8; i++) {
-			for (short j = 0; j < INS_MACROS_MAX; j++) {
-				option_values[EDITOR_INST][i][INST_MACRO + j] = 1;
-			}
-		}
-		
+		option_values[EDITOR_MULT][1][MULT_DATA + 0] = 12;  // C-0...
+		option_values[EDITOR_MULT][1][MULT_DATA + 1] = 12;  // ...until C-1
+		option_values[EDITOR_MULT][1][MULT_DATA + 2] = 13;  // C-1...
+		option_values[EDITOR_MULT][1][MULT_DATA + 3] = 36;  // ...until C-3
+		option_values[EDITOR_MULT][1][MULT_DATA + 4] = 14;  // C-3
 	}
 }
 
-bool pan_is_right(char pan) {
+bool panIsRight(char pan) {
 	return (pan < PAN_LEFT_START);
 }
 
 short getRealPanValue(char pan) {
-	if (pan_is_right(pan))
+	if (panIsRight(pan))
 		return -pan;
 	else
 		return pan - PAN_LEFT_START;
@@ -922,6 +990,7 @@ enum display_types {
 	DISP_MACROVALUEENVTRAITS,
 	DISP_MACROVALUEMODINPUT,
 	DISP_SELECTOR,
+	DISP_OCTAVE,
 	DISP_NONE
 };
 
@@ -1072,6 +1141,9 @@ void print_option(short x, short y, short highlight_color, bool is_selected, con
 	case DISP_SELECTOR:
 		sprintf(value_string, "%3x", option_value);
 		break;
+	case DISP_OCTAVE:
+		sprintf(value_string, "%4d", option_value);
+		break;
 	case DISP_NONE:
 		sprintf(value_string, "      ");
 		break;
@@ -1176,6 +1248,12 @@ void convert_interleaved_data(short* data, short* buffer, bool to_interleaved, s
 short get_type_id(short type) {
 	if (type < NUM_MACRO_TYPES - 2) {
 		return type;
+	}
+	else if (type < MACRO_EFFECTPAN) {
+		return NUM_MACRO_TYPES - 4;
+	}
+	else if (type < MACRO_EFFECTCOEF) {
+		return NUM_MACRO_TYPES - 3;
 	}
 	else if (type < MACRO_EFFECTADRS) {
 		return NUM_MACRO_TYPES - 2;
@@ -1422,10 +1500,10 @@ const edit_option macro_data_abs[NUM_MACRO_TYPES] = {
 	{macro_str_abs, 5, MACRO_PITCHMULTIPLIER_LBOUND, MACRO_PITCHMULTIPLIER_UBOUND, DISP_MACROVALUEADDONE},
 	{macro_str_abs, 5, MACRO_PITCHDIVIDER_LBOUND, MACRO_PITCHDIVIDER_UBOUND, DISP_MACROVALUEADDONE},
 	{macro_str_abs, 4, MACRO_LEVELSCALING_LBOUND, MACRO_LEVELSCALING_UBOUND, DISP_MACROVALUESIGNED},
-	{macro_str_abs, 2, MACRO_EFFECTVOLUME_LBOUND, MACRO_EFFECTVOLUME_UBOUND, DISP_MACROVALUESIGNED},
-	{macro_str_abs, 3, MACRO_EFFECTPAN_LBOUND, MACRO_EFFECTPAN_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 3, MACRO_EFFECTSLOT_LBOUND, MACRO_EFFECTSLOT_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 2, MACRO_INPUTLEVEL_LBOUND, MACRO_INPUTLEVEL_UBOUND, DISP_MACROVALUESIGNED},
+	{macro_str_abs, 2, MACRO_EFFECTVOLUME_LBOUND, MACRO_EFFECTVOLUME_UBOUND, DISP_MACROVALUESIGNED},
+	{macro_str_abs, 3, MACRO_EFFECTPAN_LBOUND, MACRO_EFFECTPAN_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 100, MACRO_EFFECTCOEF_LBOUND, MACRO_EFFECTCOEF_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 0x100, MACRO_EFFECTADRS_LBOUND, MACRO_EFFECTADRS_UBOUND, DISP_MACROVALUEUNSIGNEDHEX},
 };
@@ -1473,14 +1551,14 @@ const edit_option channel_options[NUM_CHAN_OPTIONS] = {
 };
 const edit_option channel_option = { "Channel", 4, 0, 0, DISP_SELECTOR };
 
-const edit_option octave_option = { "Octave", 2, -8, 7, DISP_DEFAULT };
+const edit_option octave_option = { "Octave", 2, -8, 7, DISP_OCTAVE };
 short octave = 0;
 
 option_page sample_editor = { sample_options, NUM_PCM_OPTIONS, 0, &sample_option, NUM_SAMPLES, 0 };
 option_page multi_editor = { multi_options, NUM_MULT_OPTIONS, 0, &multi_option, NUM_MULTIS, 0 };
 option_page instrument_editor = { options, NUM_INST_OPTIONS, 0, &instrument_option, NUM_INSTRUMENTS, 0 };
 option_page macro_editor = { macro_options, NUM_MACR_OPTIONS, 0, &macro_option, NUM_MACROS, 0 };
-option_page channel_editor = { channel_options, NUM_CHAN_OPTIONS, 0, &channel_option, 0, 1 };
+option_page channel_editor = { channel_options, NUM_CHAN_OPTIONS, 0, &channel_option, 0, 0 };
 option_page* editors[NUM_EDITORS] = { &multi_editor, &sample_editor, &instrument_editor, &macro_editor, &channel_editor };
 
 void write_option_values_and_update(void) {
@@ -1562,13 +1640,15 @@ void write_option_values_and_update(void) {
 				ins_mod_volume_change(current_instrument, (char)current_options[INST_MOD_STRENGTH]);
 				ins_mod_input_x_change(current_instrument, getRegisterSlotInput((char)current_options[INST_MOD_INPUT_X]), (char)current_options[INST_X_GENERATION]);
 				ins_mod_input_y_change(current_instrument, getRegisterSlotInput((char)current_options[INST_MOD_INPUT_Y]), (char)current_options[INST_Y_GENERATION]);
-				ins_effect_parameter_change(current_instrument, (char)current_options[INST_EFFECT_VOLUME], (char)current_options[INST_EFFECT_PAN]);
 				ins_effect_input_change(current_instrument, (char)current_options[INST_INPUT_VOLUME], (char)current_options[INST_EFFECT_SLOT]);
 				ins_mod_input_y_change(current_instrument, getRegisterSlotInput((char)current_options[INST_MOD_INPUT_Y]), (char)current_options[INST_Y_GENERATION]);
 				ins_freq_ratio_change(current_instrument, (unsigned char)current_options[INST_FREQ_MULTIPLIER], (unsigned char)current_options[INST_FREQ_DIVIDER]);
 				ins_level_scaling_change(current_instrument, (unsigned char)current_options[INST_LEVEL_SCALING]);
 				ins_note_offset_change(current_instrument, (unsigned char)current_options[INST_SEMITONE], (unsigned char)current_options[INST_CENT]);
 				ins_register_detune_change(current_instrument, current_options[INST_REGISTER_DETUNE]);
+				for (short j = 0; j < NUM_EFFECT_SLOTS; j++) {
+					dsp_effect_parameter_change(j, (char)current_options[INST_EFFECT_VOLUME], (char)current_options[INST_EFFECT_PAN]);
+				}
 				for (short j = 0; j < INS_MACROS_MAX; j++) {
 					ins_macro_change(current_instrument, j, (unsigned char)(current_options[INST_MACRO + j]));
 				}
@@ -1971,6 +2051,7 @@ void			my_draw(void)
 			}
 			if (new_editor != current_editor) {
 				current_editor = new_editor;
+				cut_sound = true;
 				move_left = false;
 				move_right = false;
 				move_up = false;
@@ -2014,6 +2095,7 @@ void			my_draw(void)
 				if (new_editor != current_editor) {
 					current_editor = new_editor;
 					should_write = true;
+					cut_sound = true;
 				}
 
 				move_left = false;
@@ -2103,54 +2185,60 @@ void			my_draw(void)
 		for (short i = 0; i <= 1; i++) {
 			jo_clear_screen_line(i);
 		}
+
 		jo_clear_screen_line(2);
-		if (play_single) {
-			jo_printf_with_color(1, 2, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Single Slot");
-		}
-		else {
-			jo_printf_with_color(1, 2, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Whole Patch");
-		}
-		jo_clear_screen_line(3);
-		
-		bool is_playing = false;
 		static const char* editor_names[] = {
 				"Multi-Sample",
 				"Sample",
 				"Instrument",
+				"Macro",
+				"Channel",
 		};
+		jo_printf_with_color(1, 2, JO_COLOR_INDEX_White, "%s Editor", editor_names[current_editor]);
+
+		jo_clear_screen_line(3);
+		if (play_single) {
+			jo_printf_with_color(1, 3, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Single Slot");
+		}
+		else {
+			jo_printf_with_color(1, 3, JO_COLOR_INDEX_Yellow, "Play/Edit Mode: Whole Patch");
+		}
+
+		jo_clear_screen_line(4);
+		bool is_playing = false;
 		for (short i = 0; i < NUM_CHANNELS; i++) {
 			if (jam_channels[i].play_state != 0) {
 				is_playing = true;
 			}
 		}
 		if (!is_playing) {
-			jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Stopped");
+			jo_printf_with_color(1, 4, JO_COLOR_INDEX_White, "State: Stopped");
 		}
 		else if (current_editor < EDITOR_INST) {
-			jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[current_editor], editor->current_selector);
+			jo_printf_with_color(1, 4, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[current_editor], editor->current_selector);
 		}
 		else {
 			if (chnCtrl[0].instrumentID == instrument_editor.current_selector && option_values[EDITOR_INST][instrument_editor.current_selector][INST_PATCHLENGTH] == 0) {
-				jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[EDITOR_INST], instrument_editor.current_selector);
+				jo_printf_with_color(1, 4, JO_COLOR_INDEX_White, "State: Playing %s %d", editor_names[EDITOR_INST], instrument_editor.current_selector);
 			}
 			else {
-				jo_printf_with_color(1, 3, JO_COLOR_INDEX_White, "State: Playing Patch %d", chnCtrl[0].instrumentID);
+				jo_printf_with_color(1, 4, JO_COLOR_INDEX_White, "State: Playing Patch %d", chnCtrl[0].instrumentID);
 			}
 		}
 		
-		for (short i = 4; i <= 6; i++) {
+		for (short i = 5; i <= 7; i++) {
 			jo_clear_screen_line(i);
 		}
 
-		if (using_keyboard) print_option(2, 5, highlight_color, true, &octave_option, octave, 0, 0);
-		if (current_editor != EDITOR_CHAN) print_option(2, 6, highlight_color, true, selector, editor->current_selector, 0, 0);
+		if (using_keyboard) print_option(2, 6, highlight_color, true, &octave_option, octave, 0, 0);
+		if (current_editor != EDITOR_CHAN) print_option(2, 7, highlight_color, true, selector, editor->current_selector, 0, 0);
 			
-		for (short i = 7; i <= 9; i++) {
+		for (short i = 8; i <= 9; i++) {
 			jo_clear_screen_line(i);
 		}
 		short current_page = (editor->current_option / OPTIONS_PER_PAGE);
 		if (current_page > 0) {
-			jo_printf_with_color(19, 8, JO_COLOR_INDEX_White, "^ Previous...");
+			jo_printf_with_color(19, 9, JO_COLOR_INDEX_White, "^ Previous...");
 		}
 		short* current_options = option_values[current_editor][(short)editor->current_selector];
 		
@@ -2386,7 +2474,7 @@ void			my_draw(void)
 		jo_clear_screen_line(25);
 		jo_clear_screen_line(26);
 		if (current_page < getNumPages(editor)) {
-			jo_printf_with_color(19, 25, JO_COLOR_INDEX_White, "v Next...");
+			jo_printf_with_color(19, 24, JO_COLOR_INDEX_White, "v Next...");
 		}
 		if (!CALYPSO_DEBUG) {
 			jo_clear_screen_line(27);
@@ -2403,6 +2491,7 @@ void			my_draw(void)
 		else {
 			/* Simple debug info*/
 			jo_clear_screen_line(26);
+			test = test_func(0);
 			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test, test_func(1), test_func(2), test_func(3));
 			jo_clear_screen_line(27);
 			jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
@@ -2503,22 +2592,23 @@ void			jo_main(void)
 			option_values[EDITOR_PCM][i][PCM_BASE_NOTE] = samp->base_note;
 			option_values[EDITOR_PCM][i][PCM_BASE_PITCH] = (samp->sample_rate == 0) ? 0x11b : pcmCtrl[samples[i]].base_note;
 
-			if (samp->loop_type < No_Loop || samp->loop_type > Alternating_Loop) {
-				error_state = 3;
-			}
-
-			else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_SAMPLESTART], 0, sample_options[PCM_SAMPLESTART].lower_bound, pcm_get_max_playsize(samples[i])) != samp->playback_start) {
-				error_state = 4;
-			}
-			else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_LOOPSTART], 0, sample_options[PCM_LOOPSTART].lower_bound, pcm_get_max_playsize(samples[i]) - pcm_get_sample_start(samples[i])) != samp->loop_start) {
-				error_state = 5;
-			}
-			else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_LOOPEND], 0, pcm_get_loop_start(samples[i]), pcm_get_max_playsize(samples[i]) - pcm_get_sample_start(samples[i]))
-				!= ((samp->loop_end == 0) ? pcmCtrl[samples[i]].max_playsize - 1 : samp->loop_end)) {
-				error_state = 6;
-			}
-			else if (offsetWithClamp(option_values[EDITOR_PCM][i][PCM_BASE_NOTE], 0, sample_options[PCM_BASE_NOTE].lower_bound, sample_options[PCM_BASE_NOTE].upper_bound) != option_values[EDITOR_PCM][i][PCM_BASE_NOTE]) {
-				error_state = 7;
+			if (error_state == 0) {
+				if (samp->loop_type < No_Loop || samp->loop_type > Alternating_Loop) {
+					error_state = 3;
+				}
+				else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_SAMPLESTART], 0, sample_options[PCM_SAMPLESTART].lower_bound, pcm_get_max_playsize(samples[i])) != samp->playback_start) {
+					error_state = 4;
+				}
+				else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_LOOPSTART], 0, sample_options[PCM_LOOPSTART].lower_bound, pcm_get_max_playsize(samples[i]) - pcm_get_sample_start(samples[i])) != samp->loop_start) {
+					error_state = 5;
+				}
+				else if (offsetUnsignedWithClamp(option_values[EDITOR_PCM][i][PCM_LOOPEND], 0, pcm_get_loop_start(samples[i]), pcm_get_max_playsize(samples[i]) - pcm_get_sample_start(samples[i]))
+					!= ((samp->loop_end == 0) ? pcmCtrl[samples[i]].max_playsize - 1 : samp->loop_end)) {
+					error_state = 6;
+				}
+				else if (offsetWithClamp(option_values[EDITOR_PCM][i][PCM_BASE_NOTE], 0, sample_options[PCM_BASE_NOTE].lower_bound, sample_options[PCM_BASE_NOTE].upper_bound) != option_values[EDITOR_PCM][i][PCM_BASE_NOTE]) {
+					error_state = 7;
+				}
 			}
 
 			if (error_state != 0) {
@@ -2539,21 +2629,21 @@ void			jo_main(void)
 				case 4:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a start point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
-					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_SAMPLESTART]);
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u) > (%u)", option_values[EDITOR_PCM][i][PCM_SAMPLESTART], pcm_get_max_playsize(samples[i]));
 					break;
 				case 5:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop start point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
-					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_LOOPSTART]);
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u) > (%u)", option_values[EDITOR_PCM][i][PCM_LOOPSTART], pcm_get_max_playsize(samples[i]));
 					break;
 				case 6:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a loop end point", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, " larger than the sample!");
-					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u)", option_values[EDITOR_PCM][i][PCM_LOOPEND]);
+					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u) > (%u)", option_values[EDITOR_PCM][i][PCM_LOOPEND], pcm_get_max_playsize(samples[i]));
 					break;
 				case 7:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid base note!", samp->filename, option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
+					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
 					break;
 				default:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "An entirely undocumented");
@@ -2593,39 +2683,39 @@ void			jo_main(void)
 		chn_instrument_change(i, instruments[0]);
 	}
 
-	jo_printf(1, 7, "Checking backup memory...");
+	jo_printf(1, 8, "Checking backup memory...");
 
 	bool load_defaults = false;
 	bool check_external = false;
 
 	if (!jo_backup_mount(JoCartridgeMemoryBackup)) {
-		jo_printf(1, 7, "Checking backup memory...Not found!");
+		jo_printf(1, 8, "Checking backup memory...Not found!");
 		check_external = true;
 	}
 	else if (load_save_data(JoCartridgeMemoryBackup, true) != 0) {
-		jo_printf(1, 7, "Checking backup memory...No save found!");
+		jo_printf(1, 8, "Checking backup memory...No save found!");
 		check_external = true;
 	}
 	if (check_external) {
-		jo_printf(1, 8, "Checking external memory...");
+		jo_printf(1, 9, "Checking external memory...");
 		if (!jo_backup_mount(JoExternalDeviceBackup)) {
-			jo_printf(1, 8, "Checking external memory...Not found!");
+			jo_printf(1, 9, "Checking external memory...Not found!");
 			load_defaults = true;
 		}
 		else if (load_save_data(JoExternalDeviceBackup, true) != 0) {
-			jo_printf(1, 8, "Checking external memory...No save found!");
+			jo_printf(1, 9, "Checking external memory...No save found!");
 			load_defaults = true;
 		}
 	}
 	if (load_defaults) {
-		jo_printf(1, 9, "Loading default parameters...");
+		jo_printf(1, 10, "Loading default parameters...");
 		init_option_values();
-		jo_printf(1, 9, "Loading default parameters...Done!");
+		jo_printf(1, 10, "Loading default parameters...Done!");
 	}
 	
-	jo_printf(1, 11, "Setting up...");
+	jo_printf(1, 12, "Setting up...");
 	write_option_values_and_update();
-	jo_printf(1, 11, "Setting up...Done!");
+	jo_printf(1, 12, "Setting up...Done!");
 
 	if (jo_get_input_type(0) == JoRegularKeyboard) {
 		jo_printf_with_color(1, 27, JO_COLOR_INDEX_Purple, "Press ESC to begin!");
