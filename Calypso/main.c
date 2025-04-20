@@ -22,7 +22,7 @@ int framerate;
 #define MAX_OPTIONS 0x100
 #define SAVE_SIZE MAX_SLOTS * MAX_OPTIONS
 
-#define NUM_PCM_OPTIONS 6
+#define NUM_PCM_OPTIONS 7
 enum pcm_options {
 	PCM_LOOPTYPE = 0,
 	PCM_SAMPLESTART = 1,
@@ -30,6 +30,7 @@ enum pcm_options {
 	PCM_LOOPEND = 3,
 	PCM_BASE_PITCH = 4,
 	PCM_BASE_NOTE = 5,
+	PCM_LOOP_MASK = 6,
 };
 #define NUM_MULT_OPTIONS 3 + (MLT_CTRL_LENGTH_MAX * 2)
 enum mult_options {
@@ -120,6 +121,12 @@ const char* LOOP_NAMES[] = {
 	"ALTR"
 };
 
+const char* HOLD_NAMES[] = {
+	"  OFF",
+	"ATTCK",
+	"  ALL",
+};
+
 const char* LFO_NAMES[] = {
 	"SAW",
 	"SQUARE",
@@ -145,9 +152,11 @@ const char* SAMPLETRAIT_NAMES[] = {
 
 const char* ENVTRAIT_NAMES[] = {
 	"NONE ",
-	"HOLD ",
+	"ATTK ",
+	"ALL  ",
 	"LSYN ",
-	"H + S",
+	"ATK+S",
+	"ALL+S",
 };
 
 const char* KEYON_NAMES[] = {
@@ -163,6 +172,7 @@ const char* MACRO_TYPE_NAMES[] = {
 	"LSTR",
 	"LEND",
 	"TRTS",
+	"LMSK",
 	"TLVL",
 	"DVOL",
 	"DPAN",
@@ -325,6 +335,7 @@ const short MACRO_TYPE_TO_INTERNAL[] = {
 	MACRO_LOOPSTART,
 	MACRO_LOOPEND,
 	MACRO_SAMPLETRAITS,
+	MACRO_LOOPMASK,
 	MACRO_TOTALLEVEL,
 	MACRO_VOLUME,
 	MACRO_PAN,
@@ -735,6 +746,7 @@ short pcm_option_defaults[NUM_PCM_OPTIONS] = {
 	129, // PCM_LOOPEND
 	0x11b, // PCM_BASE_PITCH
 	-3, // PCM_BASE_NOTE
+	0, // PCM_LOOP_MASK
 };
 
 short inst_option_defaults[NUM_INST_OPTIONS] = {
@@ -967,6 +979,7 @@ enum display_types {
 	DISP_LFOWAVE,
 	DISP_GENERATION,
 	DISP_LOOPTYPE,
+	DISP_HOLDTYPE,
 	DISP_SAMPLESTART,
 	DISP_LOOPSTART,
 	DISP_LOOPEND,
@@ -983,6 +996,7 @@ enum display_types {
 	DISP_MACROVALUESIGNED,
 	DISP_MACROVALUEUNSIGNEDHEX,
 	DISP_MACROVALUESIGNEDHEX,
+	DISP_MACROVALUEONOFF,
 	DISP_MACROVALUEADDONE,
 	DISP_MACROVALUEKEYON,
 	DISP_MACROVALUELFOWAVE,
@@ -1045,6 +1059,9 @@ void print_option(short x, short y, short highlight_color, bool is_selected, con
 	case DISP_LOOPTYPE:
 		sprintf(value_string, "%6s", LOOP_NAMES[option_value]);
 		break;
+	case DISP_HOLDTYPE:
+		sprintf(value_string, "%6s", HOLD_NAMES[option_value]);
+		break;
 	case DISP_PITCHWORD:
 		sprintf(value_string, "%2d:%3x", getOctave(option_value), getFine(option_value));
 		break;
@@ -1075,6 +1092,7 @@ void print_option(short x, short y, short highlight_color, bool is_selected, con
 			sprintf(value_string, "%6d", option_value);
 		break;
 	case DISP_ONOFF:
+	case DISP_MACROVALUEONOFF:
 		sprintf(value_string, "%6s", (option_value != 0) ? "ON" : "OFF");
 		break;
 	case DISP_GENERATION:
@@ -1174,6 +1192,7 @@ void print_option(short x, short y, short highlight_color, bool is_selected, con
 		case DISP_MULTIDATA:
 			jo_printf_with_color(x, y, highlight_color, "%s (%s%1d): %s %s %s", option->label, NOTE_NAMES[(option_index) % 12], (option_index) / 12, (option_value != option->lower_bound) ? left_arrow : "  ", value_string, (option_value != option->upper_bound) ? right_arrow : "  ");
 			break;
+		case DISP_MACROVALUEONOFF:
 		case DISP_MACROVALUESIGNED:
 		case DISP_MACROVALUEUNSIGNED:
 		case DISP_MACROVALUESIGNEDHEX:
@@ -1199,6 +1218,7 @@ void print_option(short x, short y, short highlight_color, bool is_selected, con
 		case DISP_MULTIDATA:
 			jo_printf_with_color(x, y, JO_COLOR_INDEX_White, "%s (%s%1d):    %s", option->label, NOTE_NAMES[(option_index) % 12], (option_index) / 12, value_string);
 			break;
+		case DISP_MACROVALUEONOFF:
 		case DISP_MACROVALUESIGNED:
 		case DISP_MACROVALUEUNSIGNED:
 		case DISP_MACROVALUESIGNEDHEX:
@@ -1399,6 +1419,7 @@ const edit_option sample_options[NUM_PCM_OPTIONS] = {
 		{"   Loop End Offset", 0x100, 0, 0, DISP_LOOPEND},
 		{"        Base Pitch", 16, 0x4000, 0x3BFF, DISP_PITCHWORD},
 		{"         Base Note", 12, -96, 95, DISP_NOTE},
+		{"         Loop Mask", 1, 0, 1, DISP_ONOFF},
 };
 
 const edit_option sample_option = { "Sample", 4, 0, NUM_SAMPLES, DISP_SELECTOR };
@@ -1435,8 +1456,8 @@ const edit_option options[NUM_INST_OPTIONS - INS_MACROS_MAX + 1] = {
 	{"       Note Offset", 12, -96, 95, DISP_DEFAULT},
 	{"       Cent Detune", 10, -100, 99, DISP_DEFAULT},
 	{"   Register Detune", 165, -16384, 16384, DISP_SIGNEDHEX},
-	{"         Hold Mode", 1, 0, 1, DISP_ONOFF},
-	{"       Attack/Hold", 4, 0, 0x1F, DISP_ZERODISABLE},
+	{"         Hold Mode", 1, 0, 2, DISP_HOLDTYPE},
+	{"            Attack", 4, 0, 0x1F, DISP_ZERODISABLE},
 	{"           Decay 1", 4, 0, 0x1F, DISP_ZERODISABLE},
 	{"           Sustain", 4, 0, 0x1F, DISP_ZERODISABLE},
 	{"           Decay 2", 4, 0, 0x1F, DISP_ZERODISABLE},
@@ -1475,6 +1496,7 @@ const edit_option macro_data_abs[NUM_MACRO_TYPES] = {
 	{macro_str_abs, 0x100, MACRO_LOOPSTART_LBOUND, MACRO_LOOPSTART_UBOUND, DISP_MACROVALUEUNSIGNEDHEX},
 	{macro_str_abs, 0x100, MACRO_LOOPEND_LBOUND, MACRO_LOOPEND_UBOUND, DISP_MACROVALUEUNSIGNEDHEX},
 	{macro_str_abs, 1, MACRO_SAMPLETRAITS_LBOUND, MACRO_SAMPLETRAITS_UBOUND, DISP_MACROVALUESAMPLETRAITS},
+	{macro_str_abs, 1, MACRO_LOOPMASK_LBOUND, MACRO_LOOPMASK_UBOUND, DISP_MACROVALUEONOFF},
 	{macro_str_abs, 0x10, MACRO_TOTALLEVEL_LBOUND, MACRO_TOTALLEVEL_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 2, MACRO_VOLUME_LBOUND, MACRO_VOLUME_UBOUND, DISP_MACROVALUESIGNED},
 	{macro_str_abs, 3, MACRO_PAN_LBOUND, MACRO_PAN_UBOUND, DISP_MACROVALUESIGNED},
@@ -1579,6 +1601,7 @@ void write_option_values_and_update(void) {
 				}
 				pcm_base_pitch_change(current_sample, (short)current_options[PCM_BASE_PITCH]);
 				pcm_base_note_change(current_sample, (unsigned char)current_options[PCM_BASE_NOTE]);
+				pcm_loop_mask_change(current_sample, (unsigned char)current_options[PCM_LOOP_MASK]);
 			}
 		}
 
@@ -1635,7 +1658,7 @@ void write_option_values_and_update(void) {
 				ins_sustain_change(current_instrument, (char)current_options[INST_SUSTAIN]);
 				ins_decay2_change(current_instrument, (char)current_options[INST_DECAY2]);
 				ins_release_change(current_instrument, (char)current_options[INST_RELEASE]);
-				ins_key_scaling_sync_change(current_instrument, (char)current_options[INST_KEY_SCALING], (char)current_options[INST_LOOP_SYNC]);
+				ins_key_scaling_sync_change(current_instrument, (char)current_options[INST_KEY_SCALING], (char)current_options[INST_LOOP_SYNC], (char)current_options[INST_HOLD_MODE]);
 				ins_patchlength_change(current_instrument, (unsigned char)current_options[INST_PATCHLENGTH]);
 				ins_mod_volume_change(current_instrument, (char)current_options[INST_MOD_STRENGTH]);
 				ins_mod_input_x_change(current_instrument, getRegisterSlotInput((char)current_options[INST_MOD_INPUT_X]), (char)current_options[INST_X_GENERATION]);
@@ -2492,7 +2515,7 @@ void			my_draw(void)
 			/* Simple debug info*/
 			jo_clear_screen_line(26);
 			test = test_func(0);
-			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", test, test_func(1), test_func(2), test_func(3));
+			jo_printf_with_color(0, 26, JO_COLOR_INDEX_White, "00: %4x  01: %4x  02: %4x  03: %4x", (unsigned short)test, test_func(1), test_func(2), test_func(3));
 			jo_clear_screen_line(27);
 			jo_printf_with_color(0, 27, JO_COLOR_INDEX_White, "08: %4x  09: %4x  0A: %4x  0B: %4x", test_func(8), test_func(9), test_func(10), test_func(11));
 			jo_clear_screen_line(28);
@@ -2591,6 +2614,7 @@ void			jo_main(void)
 			option_values[EDITOR_PCM][i][PCM_LOOPEND] = (samp->loop_end == 0) ? pcmCtrl[samples[i]].max_playsize - 1 : samp->loop_end;
 			option_values[EDITOR_PCM][i][PCM_BASE_NOTE] = samp->base_note;
 			option_values[EDITOR_PCM][i][PCM_BASE_PITCH] = (samp->sample_rate == 0) ? 0x11b : pcmCtrl[samples[i]].base_note;
+			option_values[EDITOR_PCM][i][PCM_LOOP_MASK] = samp->loop_mask;
 
 			if (error_state == 0) {
 				if (samp->loop_type < No_Loop || samp->loop_type > Alternating_Loop) {
@@ -2608,6 +2632,9 @@ void			jo_main(void)
 				}
 				else if (offsetWithClamp(option_values[EDITOR_PCM][i][PCM_BASE_NOTE], 0, sample_options[PCM_BASE_NOTE].lower_bound, sample_options[PCM_BASE_NOTE].upper_bound) != option_values[EDITOR_PCM][i][PCM_BASE_NOTE]) {
 					error_state = 7;
+				}
+				else if (samp->loop_mask != No_Loop_Mask && samp->loop_mask != Use_Loop_Mask) {
+					error_state = 8;
 				}
 			}
 
@@ -2642,8 +2669,12 @@ void			jo_main(void)
 					jo_printf_with_color(1, 11, JO_COLOR_INDEX_Yellow, "(%u) > (%u)", option_values[EDITOR_PCM][i][PCM_LOOPEND], pcm_get_max_playsize(samples[i]));
 					break;
 				case 7:
-					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid base note!", samp->filename, option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid base note!", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_BASE_NOTE]);
+					break;
+				case 8:
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid loop mask!", samp->filename);
+					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_LOOP_MASK]);
 					break;
 				default:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "An entirely undocumented");

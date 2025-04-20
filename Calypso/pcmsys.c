@@ -53,7 +53,7 @@ static const int logtbl[] = {
 #define MELODIC_KEYOFF 0x80
 
 sysComPara* m68k_com = (sysComPara*)((SNDPRG + DRV_SYS_END) | 0x20000000);
-static unsigned int* scsp_loading_start = (unsigned int*)(0x408 + DRV_SYS_END + 0x40); //Local loading address for sound data, is DRV_SYS_END ahead of the SNDPRG, and ahead of the communication data
+static unsigned int* scsp_loading_start = (unsigned int*)(0x408 + DRV_SYS_END + 0x80); //Local loading address for sound data, is DRV_SYS_END ahead of the SNDPRG, and ahead of the communication data
 unsigned int* scsp_load;
 unsigned short* master_volume = (unsigned short*)(SNDRAM + 0x100400);
 unsigned short driver_master_volume = 0;
@@ -86,6 +86,7 @@ const unsigned short macroBounds[NUM_MACRO_TYPES][2] = {
 	{MACRO_SAMPLEOFFSET_LBOUND,MACRO_SAMPLEOFFSET_UBOUND},
 	{MACRO_LOOPSTART_LBOUND,MACRO_LOOPSTART_UBOUND},
 	{MACRO_LOOPEND_LBOUND,MACRO_LOOPEND_UBOUND},
+	{MACRO_LOOPMASK_LBOUND,MACRO_LOOPMASK_UBOUND},
 	{MACRO_TOTALLEVEL_LBOUND,MACRO_TOTALLEVEL_UBOUND},
 	{MACRO_VOLUME_LBOUND,MACRO_VOLUME_UBOUND},
 	{MACRO_ATTACK_LBOUND,MACRO_ATTACK_UBOUND},
@@ -356,6 +357,10 @@ void	pcm_base_note_change(short pcmNumber, unsigned char note) {
 	pcmCtrl[pcmNumber].base_note = note;
 }
 
+void	pcm_loop_mask_change(short pcmNumber, unsigned char mask) {
+	if (pcmNumber < 0) return;
+	pcmCtrl[pcmNumber].loop_mask = (mask != 0);
+}
 
 unsigned short	pcm_get_max_playsize(short pcmNumber) {
 	if (pcmNumber < 0) return 0;
@@ -447,7 +452,7 @@ void	ins_noise_mode_change(short insNumber, char noise_mode) {
 
 void	ins_attack_hold_change(short insNumber, char attack_hold, char hold_mode) {
 	if (insNumber < 0) return;
-	insCtrl[insNumber].attack_hold = attack_hold | ((hold_mode != 0) ? 1 : 0) << 5;
+	insCtrl[insNumber].attack_hold = attack_hold | (((hold_mode != 0) ? 1 : 0) << 5);
 }
 void	ins_decay1_change(short insNumber, char decay1) {
 	if (insNumber < 0) return;
@@ -465,9 +470,9 @@ void	ins_release_change(short insNumber, char release) {
 	if (insNumber < 0) return;
 	insCtrl[insNumber].release = release;
 }
-void	ins_key_scaling_sync_change(short insNumber, char key_scaling, char loop_sync) {
+void	ins_key_scaling_sync_change(short insNumber, char key_scaling, char loop_sync, char hold_mode) {
 	if (insNumber < 0) return;
-	insCtrl[insNumber].key_scaling_sync = key_scaling | ((loop_sync != 0) ? 1 : 0) << 4;
+	insCtrl[insNumber].key_scaling_sync = key_scaling | ((loop_sync != 0) ? 1 : 0) << 4 | ((hold_mode == 2) ? 1 : 0) << 5;
 }
 
 void	ins_enable_envelope(short insNumber) {
@@ -992,11 +997,11 @@ void	chn_set_macro_values(short chnNumber) {
 #define OCTAVE_MIDPOINT 8
 #define OCTAVE_SIZE 16
 #define SEMITONES_PER_OCT 12
-void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune) {
+void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune, unsigned char loop_mask) {
 	short semitone = note_offset + ((instrument->use_multi != 0 && mlt_is_base_note_override(instrument->sampleID) ? 0 : (char)note)) - ((char)(sample->base_note));
 	short pitch_as_short;
 	jo_fixed pitch = jo_int2fixed(sample->base_pitch & MAX_PITCH);
-	signed char octave = (sample->base_pitch >> 11);
+	signed char octave = ((sample->base_pitch & 0x7fff) >> 11);
 
 	if (octave >= OCTAVE_MIDPOINT)
 		octave -= OCTAVE_SIZE;
@@ -1083,7 +1088,7 @@ void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* s
 
 	if (octave < 0) 
 		octave += OCTAVE_SIZE;
-	channel->final_pitch = (pitch_as_short & MAX_PITCH) | (octave << 11);
+	channel->final_pitch = (pitch_as_short & MAX_PITCH) | (octave << 11) | (((loop_mask != 0) ? 1 : 0) << 15); // Setting the uppermost bit enables seamless FM wraparound (for certain sample sizes)
 
 	if (sample->bitDepth != PCM_TYPE_ADX) {
 		channel->bytes_per_blank = calculate_bytes_per_blank_with_pitchword(channel->final_pitch, sample->bitDepth);
@@ -1092,7 +1097,7 @@ void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* s
 
 void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _INS_CTRL* instrument, short level, unsigned char scaling) {
 	if (scaling != 0) {
-		short octave = channel->final_pitch >> 11;
+		short octave = (channel->final_pitch & 0x7fff) >> 11;
 		if (octave < 8) {
 			octave += 8;
 		}
@@ -1197,6 +1202,7 @@ void	chn_set_values(short chnNumber) {
 	short reg_detune = instrument->register_detune;
 	short freq_mul = (instrument->freq_ratio & 0xFF) + 1;
 	short freq_div = (instrument->freq_ratio >> 8) + 1;
+	unsigned char loop_mask = sample->loop_mask;
 
 	for (short i = 0; i < INS_MACROS_MAX; i++) {
 		short mcrNumber = instrument->macros[i];
@@ -1244,11 +1250,11 @@ void	chn_set_values(short chnNumber) {
 							channel->key_data |= value_buffer << 7;
 							break;
 						case MACRO_ENVELOPETRAITS:
-							value_buffer = (macro_value & 1);
+							value_buffer = (macro_value % 3) & 1;
 							channel->decay_1_2_attack &= ((0xFFFF >> (16 - 5)) | (0xFFFF << 6));
 							channel->decay_1_2_attack |= value_buffer << 5;
-							value_buffer = (macro_value & 3) >> 1;
-							channel->key_decay_release &= ((0xFFFF >> (16 - 14)) | (0xFFFF << 15));
+							value_buffer = ((macro_value % 3) & 2) | ((macro_value >= 3) ? 1 : 0);
+							channel->key_decay_release &= (0xFFFF >> (16 - 14));
 							channel->key_decay_release |= value_buffer << 14;
 							break;
 						case MACRO_LFORESET:
@@ -1262,6 +1268,9 @@ void	chn_set_values(short chnNumber) {
 							break;
 						case MACRO_LOOPEND:
 							loopend_offset = macro_value;
+							break;
+						case MACRO_LOOPMASK:
+							loop_mask = macro_value;
 							break;
 						case MACRO_PITCHLFOWAVEFORM:
 							channel->lfo_data &= ((0xFFFF >> (16 - 8)) | (0xFFFF << 10));
@@ -1427,7 +1436,7 @@ void	chn_set_values(short chnNumber) {
 		jo_set_default_background_color(JO_COLOR_DarkYellow);
 	}*/
 
-	chn_set_final_pitch(channel, instrument, sample, note, note_offset, cent, freq_mul, freq_div, reg_detune);
+	chn_set_final_pitch(channel, instrument, sample, note, note_offset, cent, freq_mul, freq_div, reg_detune, loop_mask);
 
 	//jo_set_default_background_color(JO_COLOR_DarkRed);
 	/*if ((short)m68k_com->start - 2 < chnNumber) {
@@ -1443,6 +1452,7 @@ void	chn_set_values(short chnNumber) {
 	chn_set_final_level(channel, patch_leader_channel, instrument, level, scaling);
 
 	//jo_set_default_background_color(JO_COLOR_Black);
+	channel->test_area = channel->key_decay_release;
 }
 #pragma GCC pop_options
 
@@ -1782,6 +1792,10 @@ short			load_16bit_pcm(Sint8* filename, int sampleRate, Bool shouldLoop, Bool ad
 	file_size += ((unsigned int)file_size & 3) ? 2 : 0;
 
 	if ((int)scsp_load + file_size + ((addSilenceAtStart) ? MAX_FM_READ_OFFSET : 0) > 0x7F800) return -1; // Sample won't fit into RAM
+
+	for (short i = 0; i < file_size; i++) {
+		*scsp_load = 0;
+	}
 
 	if (addSilenceAtStart)
 		GFS_Load(local_name, 0, (Uint32*)((unsigned int)scsp_load + MAX_FM_READ_OFFSET + SNDRAM), file_size);

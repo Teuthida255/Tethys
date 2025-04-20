@@ -17,11 +17,17 @@ enum sample_loop_types {
 	Alternating_Loop = 3,
 };
 
+enum sample_loop_mask_types {
+	No_Loop_Mask = 0,
+	Use_Loop_Mask = 1,
+};
+
 typedef struct {
 	const char filename[12];
 	const int sample_rate;
 	const short data_type;
 	const short loop_type;
+	const unsigned char loop_mask;
 	const unsigned short playback_start;
 	const unsigned short loop_start;
 	const unsigned short loop_end;

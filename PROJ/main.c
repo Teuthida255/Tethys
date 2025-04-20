@@ -127,10 +127,10 @@ void lead_function(void) // Link start to main
 // 4       |                                                  LOOP START ADDRESS [LSA] 15-0                                               | loop_start
 // 6       |                                                  LOOP END ADDRESS    [LEA] 15-0                                              | playsize
 // 8       |  D2R-DECAY 2 RATE    5 BIT           |   D1R-DECAY 1 RATE    5 BIT           |   HO  |   AR-ATTACK RATE  5 BIT               | decay_1_2_attack
-// 10      |  -   |   LS  |   KRS-KEY RATE SCALE 4 BIT    |   DL-DECAY LEVEL      5 BIT           |   RR-RELEASE RATE 5 BIT               | key_decay_release
+// 10      |  HX  |   LS  |   KRS-KEY RATE SCALE 4 BIT    |   DL-DECAY LEVEL      5 BIT           |   RR-RELEASE RATE 5 BIT               | key_decay_release
 // 12      |  -       -       -       -       -       -   |   SD  |   SI  |   TL-TOTAL LEVEL  8 BIT   [VOLUME]                            | attenuation
 // 14      |  MDL-MODULATION LEVEL 4BIT   |   MDXSL-X MODULATION SELECT   6 BIT           |   MDYSL-Y MODULATION SELECT   6 BIT           | FM_data
-// 16      |  -   |   OCT-OCTAVE 4BIT             |   -   | FNS-FREQUENCY NUMBER SWITCH [PITCH] 10 BIT                                    | oct_fns
+// 16      |  MM  |   OCT-OCTAVE 4BIT             |         FNS-FREQUENCY NUMBER SWITCH [PITCH] 10 BIT                                    | oct_fns
 // 18      |  RE  |   LFOF-LFO FREQUENCY 5 BIT            |   PLFOWS-2BIT |   PLFOS-3BIT [PITCH]  |   AFLOWS-2BIT |   AFLOS-3BIT  [AMP]   | lfo_data
 // 20      |  -       -       -       -       -       -       -       -       -   |   ISEL-INPUT SELECT 4 BIT     |   IMXL-INPUT MIX LVL  | input_sel
 // 22      |  DISDL-3BIT          |   DIPAN-5 BIT                         |   EFSDL-3BIT          |   EFPAN - EFFECT PAN  5 BIT           | pan_send

@@ -137,7 +137,7 @@
 #define ADX_1920_COEF_1 (6359)
 #define ADX_1920_COEF_2 (-2469)
 
-#define NUM_MACRO_TYPES 36
+#define NUM_MACRO_TYPES 37
 #define NUM_MACRO_TYPES_NONUNIQUE (NUM_MACRO_TYPES - 2 + 63 + 32 + 32 - 1)
 enum macro_types {
 	MACRO_KEYON = 0,
@@ -150,29 +150,30 @@ enum macro_types {
 	MACRO_SAMPLEOFFSET = 7,
 	MACRO_LOOPSTART = 8,
 	MACRO_LOOPEND = 9,
-	MACRO_TOTALLEVEL = 10,
-	MACRO_VOLUME = 11,
-	MACRO_ATTACK = 12,
-	MACRO_DECAY1 = 13,
-	MACRO_SUSTAIN = 14,
-	MACRO_DECAY2 = 15,
-	MACRO_RELEASE = 16,
-	MACRO_KEYSCALING = 17,
-	MACRO_LFOFREQ = 18,
-	MACRO_PITCHLFOSTRENGTH = 19,
-	MACRO_AMPLFOSTRENGTH = 20,
-	MACRO_MODLEVEL = 21,
-	MACRO_PITCHMULTIPLIER = 22,
-	MACRO_PITCHDIVIDER = 23,
-	MACRO_LEVELSCALING = 24,
-	MACRO_INPUTLEVEL = 25,
-	MACRO_PAN = 26,
-	MACRO_NOTEOFFSET = 27,
-	MACRO_CENTDETUNE = 28,
-	MACRO_REGISTERDETUNE = 29,
-	MACRO_MODINPUTX = 30,
-	MACRO_MODINPUTY = 31,
-	MACRO_EFFECTVOLUME = 32,
+	MACRO_LOOPMASK = 10,
+	MACRO_TOTALLEVEL = 11,
+	MACRO_VOLUME = 12,
+	MACRO_ATTACK = 13,
+	MACRO_DECAY1 = 14,
+	MACRO_SUSTAIN = 15,
+	MACRO_DECAY2 = 16,
+	MACRO_RELEASE = 17,
+	MACRO_KEYSCALING = 18,
+	MACRO_LFOFREQ = 19,
+	MACRO_PITCHLFOSTRENGTH = 20,
+	MACRO_AMPLFOSTRENGTH = 21,
+	MACRO_MODLEVEL = 22,
+	MACRO_PITCHMULTIPLIER = 23,
+	MACRO_PITCHDIVIDER = 24,
+	MACRO_LEVELSCALING = 25,
+	MACRO_INPUTLEVEL = 26,
+	MACRO_PAN = 27,
+	MACRO_NOTEOFFSET = 28,
+	MACRO_CENTDETUNE = 29,
+	MACRO_REGISTERDETUNE = 30,
+	MACRO_MODINPUTX = 31,
+	MACRO_MODINPUTY = 32,
+	MACRO_EFFECTVOLUME = 33,
 	MACRO_EFFECTPAN = MACRO_EFFECTVOLUME + NUM_EFFECT_SLOTS,
 	MACRO_EFFECTCOEF = MACRO_EFFECTPAN + NUM_EFFECT_SLOTS,
 	MACRO_EFFECTADRS = MACRO_EFFECTCOEF + NUM_COEFFICIENTS,
@@ -185,7 +186,7 @@ enum macro_types {
 #define MACRO_SAMPLETRAITS_LBOUND 0
 #define MACRO_SAMPLETRAITS_UBOUND 7
 #define MACRO_ENVELOPETRAITS_LBOUND 0
-#define MACRO_ENVELOPETRAITS_UBOUND 3
+#define MACRO_ENVELOPETRAITS_UBOUND 5
 #define MACRO_LFORESET_LBOUND 0
 #define MACRO_LFORESET_UBOUND 1
 #define MACRO_PITCHLFOWAVEFORM_LBOUND 0
@@ -200,6 +201,8 @@ enum macro_types {
 #define MACRO_LOOPSTART_UBOUND 0xFFFF
 #define MACRO_LOOPEND_LBOUND 0
 #define MACRO_LOOPEND_UBOUND 0xFFFF
+#define MACRO_LOOPMASK_LBOUND 0
+#define MACRO_LOOPMASK_UBOUND 1
 #define MACRO_TOTALLEVEL_LBOUND 0
 #define MACRO_TOTALLEVEL_UBOUND 0xFF
 #define MACRO_VOLUME_LBOUND 0
@@ -342,7 +345,9 @@ typedef struct {
 	unsigned short playsize;		   // The # of samples to play before the sound shall loop. **Otherwise used as the length of the sound.** Do not leave at 0!
 									   // 8 bit PCM is 1 byte per sample. 16 bit PCM is 2 bytes per sample. Therefore an 8bit PCM is a maximum of 64KB, and 16bit is 128KB.
 	unsigned short base_pitch;		   // the OCT & FNS, verbatim, to use when playing the sample at base_note.
-	unsigned char base_note;		   // Note at which the sample plays at base_pitche
+	unsigned char base_note;		   // Note at which the sample plays at base_pitch
+	unsigned char loop_mask;		   // Undocumented flag that causes the playback offset to wrap around instead of going out of bounds,
+									   // but also clamps the looping area to a power of 2 (greater than 128).
 	unsigned short test_area;
 	unsigned short bytes_per_blank;	   // Bytes the PCM will play every time the driver is run (vblank)
 	unsigned short decompression_size; //Size of the buffer used for an ADX sound effect. Specifically sized by Master SH2.
@@ -477,6 +482,7 @@ void	pcm_loop_end_change(short pcmNumber, unsigned short end);
 void	pcm_pitch_change(short pcmNumber, short sampleRate);
 void	pcm_base_pitch_change(short pcmNumber, short pitch);
 void	pcm_base_note_change(short pcmNumber, unsigned char note);
+void	pcm_loop_mask_change(short pcmNumber, unsigned char mask);
 
 unsigned short	pcm_get_max_playsize(short pcmNumber);
 unsigned short	pcm_get_sample_start(short pcmNumber);
@@ -501,7 +507,7 @@ void	ins_decay1_change(short insNumber, char decay1);
 void	ins_sustain_change(short insNumber, char sustain);
 void	ins_decay2_change(short insNumber, char decay2);
 void	ins_release_change(short insNumber, char release);
-void	ins_key_scaling_sync_change(short insNumber, char key_scaling, char loop_sync);
+void	ins_key_scaling_sync_change(short insNumber, char key_scaling, char loop_sync, char hold_mode);
 void	ins_enable_envelope(short insNumber);
 void	ins_disable_envelope(short insNumber);
 void	ins_patchlength_change(short insNumber, unsigned char length);
@@ -602,7 +608,7 @@ void	chn_hard_reset_macros(short chnNumber);
 void	chn_soft_reset_macros(short chnNumber);
 
 void	chn_set_macro_values(short chnNumber);
-void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune);
+void	chn_set_final_pitch(_CHN_CTRL* channel, _INS_CTRL* instrument, _PCM_CTRL* sample, short note, short note_offset, short cent, short freq_mul, short freq_div, short reg_detune, unsigned char loop_mask);
 void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _INS_CTRL* instrument, short level, unsigned char scaling);
 void	chn_set_values(short chnNumber);
 
