@@ -74,6 +74,7 @@ short base_coefficients[NUM_COEFFICIENTS];
 unsigned short base_addresses[NUM_ADDRESSES];
 short coefficientBounds[NUM_COEFFICIENTS][2];
 unsigned short addressBounds[NUM_ADDRESSES][2];
+unsigned char pcmNoLoopEnabled[PCM_CTRL_MAX];
 
 const unsigned short macroBounds[NUM_MACRO_TYPES][2] = {
 	{MACRO_KEYON_LBOUND,MACRO_KEYON_UBOUND},
@@ -1122,7 +1123,7 @@ void	chn_set_final_level(_CHN_CTRL* channel, _CHN_CTRL* patch_leader_channel, _I
 }
 
 
-
+#define SILENCE_LOOP_LENGTH 128 // should be less than MAX_FM_READ_OFFSET
 void	chn_set_values(short chnNumber) {
 	//jo_set_default_background_color(JO_COLOR_DarkBlue);
 	/*if ((short)m68k_com->start - 2 < chnNumber) {
@@ -1152,7 +1153,9 @@ void	chn_set_values(short chnNumber) {
 	_INS_CTRL* instrument = &(insCtrl[insNumber]);
 	_PCM_CTRL* sample = &(pcmCtrl[pcmNumber]);
 
-	channel->key_data = (loop_type << 5) | ((sample->bitDepth % 2) << 4) | (instrument->bit_reverse << 9) | (instrument->noise_mode << 7);
+	// Disabling looping has the potential to introduce bugs,
+	// so a loop type of 'none' just sets the loop area to a blank area after the sample
+	channel->key_data = (((loop_type > 0) ? loop_type : 1) << 5) | ((sample->bitDepth % 2) << 4) | (instrument->bit_reverse << 9) | (instrument->noise_mode << 7);
 
 	// Effect volume and pan are actually global values that affect the entire DSP slot and must be handled separately
 	channel->pan_send = instrument->volume << 13 | instrument->pan << 8;
@@ -1233,7 +1236,6 @@ void	chn_set_values(short chnNumber) {
 					}
 					else if (macro->type >= MACRO_EFFECTVOLUME) {
 						effect_levels[macro->type - MACRO_EFFECTVOLUME] = (unsigned char)channel->macro_values[i];
-						chnCtrl[chnNumber].test_area = (unsigned short)(channel->macro_timers[i]);
 					}
 					else {
 						short value_buffer = 0;
@@ -1422,8 +1424,20 @@ void	chn_set_values(short chnNumber) {
 
 	channel->key_data |= (address >> 16);
 	channel->start_addr = (unsigned short)address;
-	channel->LSA = loop;
-	channel->playsize = playsize;
+	if (loop_type == 0) {
+		if ((unsigned int)sample->filesize + 4 >= 0xffff)
+			channel->LSA = 0xfffe;
+		else
+			channel->LSA = sample->filesize + 4;
+		if ((unsigned int)sample->filesize + 4 + SILENCE_LOOP_LENGTH >= 0xffff)
+			channel->playsize = 0xffff;
+		else
+			channel->playsize = sample->filesize + 4 + SILENCE_LOOP_LENGTH;
+	}
+	else {
+		channel->LSA = loop;
+		channel->playsize = playsize;
+	}
 
 	//jo_set_default_background_color(JO_COLOR_DarkYellow);
 	/*if ((short)m68k_com->start - 2 < chnNumber) {
@@ -1452,7 +1466,7 @@ void	chn_set_values(short chnNumber) {
 	chn_set_final_level(channel, patch_leader_channel, instrument, level, scaling);
 
 	//jo_set_default_background_color(JO_COLOR_Black);
-	channel->test_area = channel->key_decay_release;
+	channel->test_area = sample->max_playsize;
 }
 #pragma GCC pop_options
 
@@ -1744,6 +1758,7 @@ short initialize_new_pcm(Bool is8Bit, int sampleRate, Sint32 file_size, Sint32 p
 	pcmCtrl[numberPCMs].loopType = 0; //Initialize as non-looping
 	pcmCtrl[numberPCMs].playsize = pcmCtrl[numberPCMs].max_playsize;
 	pcmCtrl[numberPCMs].sample_start = 0;
+	pcmCtrl[numberPCMs].filesize = file_size;
 
 	numberPCMs++; // Increment PCM #
 	scsp_load = (unsigned int*)((unsigned int)scsp_load + file_size);
@@ -1838,7 +1853,7 @@ short			load_8bit_pcm(Sint8* filename, int sampleRate, Bool shouldLoop, Bool add
 	return initialize_new_pcm(true, sampleRate, file_size, file_size + ((shouldLoop) ? 1 : 0), addSilenceAtStart);
 }
 
-short			load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate)
+short			load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate, Bool addSilenceAtStart)
 {
 	if ((int)scsp_load > 0x7F800) return -1; // Illegal PCM data address, exit
 	if (numberPCMs >= PCM_CTRL_MAX) return -1; // Maximum number of PCMs reached, exit
@@ -1866,7 +1881,10 @@ short			load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate)
 
 	if (file_size * total_repeats > (128 * 1024)) return -1; // PCM size too large for general-purpose playback [could still work with timed execution & offets]
 	
-	if ((int)scsp_load + (file_size * total_repeats) > 0x7F800) return -1; // Sample won't fit into RAM
+	if ((int)scsp_load + (file_size * total_repeats) + ((addSilenceAtStart) ? MAX_FM_READ_OFFSET : 0) > 0x7F800) return -1; // Sample won't fit into RAM
+
+	if (addSilenceAtStart)
+		scsp_load = (unsigned int*)((unsigned int)scsp_load + MAX_FM_READ_OFFSET);
 
 	for (short i = 0; i < total_repeats; i++) {
 		GFS_Load(local_name, 0, (Uint32*)((unsigned int)scsp_load + SNDRAM), file_size);
@@ -1881,7 +1899,7 @@ short			load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate)
 	return chnNumber;
 }
 
-short			load_8bit_pcm_with_fm_padding(Sint8* filename, int sampleRate)
+short			load_8bit_pcm_with_fm_padding(Sint8* filename, int sampleRate, Bool addSilenceAtStart)
 {
 	if ((int)scsp_load > 0x7F800) return -1; // Illegal PCM data address, exit
 	if (numberPCMs >= PCM_CTRL_MAX) return -1; // Maximum number of PCMs reached, exit
@@ -1910,7 +1928,10 @@ short			load_8bit_pcm_with_fm_padding(Sint8* filename, int sampleRate)
 
 	if (file_size * total_repeats > (64 * 1024)) return -1; // PCM size too large for general-purpose playback [could still work with timed execution & offets]
 
-	if ((int)scsp_load + (file_size * total_repeats) > 0x7F800) return -1; // Sample won't fit into RAM
+	if ((int)scsp_load + (file_size * total_repeats) + ((addSilenceAtStart) ? MAX_FM_READ_OFFSET : 0) > 0x7F800) return -1; // Sample won't fit into RAM
+
+	if (addSilenceAtStart)
+		scsp_load = (unsigned int*)((unsigned int)scsp_load + MAX_FM_READ_OFFSET);
 
 	for (short i = 0; i < total_repeats; i++) {
 		GFS_Load(local_name, 0, (Uint32*)((unsigned int)scsp_load + SNDRAM), file_size);

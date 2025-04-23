@@ -344,6 +344,7 @@ typedef struct {
 	unsigned short LSA;				   // The # of samples forward from the start address to return to after loop.
 	unsigned short playsize;		   // The # of samples to play before the sound shall loop. **Otherwise used as the length of the sound.** Do not leave at 0!
 									   // 8 bit PCM is 1 byte per sample. 16 bit PCM is 2 bytes per sample. Therefore an 8bit PCM is a maximum of 64KB, and 16bit is 128KB.
+	unsigned short filesize;		   // The total size of the sample.
 	unsigned short base_pitch;		   // the OCT & FNS, verbatim, to use when playing the sample at base_note.
 	unsigned char base_note;		   // Note at which the sample plays at base_pitch
 	unsigned char loop_mask;		   // Undocumented flag that causes the playback offset to wrap around instead of going out of bounds,
@@ -423,6 +424,7 @@ extern short base_coefficients[NUM_COEFFICIENTS];
 extern unsigned short base_addresses[NUM_ADDRESSES];
 extern short coefficientBounds[NUM_COEFFICIENTS][2];
 extern unsigned short addressBounds[NUM_ADDRESSES][2];
+extern unsigned char pcmNoLoopEnabled[PCM_CTRL_MAX];
 extern	unsigned int* scsp_load;
 extern unsigned short* master_volume;
 extern unsigned short driver_master_volume;
@@ -462,8 +464,8 @@ short	initialize_new_pcm(Bool is8Bit, int sampleRate, Sint32 file_size, Sint32 p
 short	copy_pcm(short pcmNumber);
 short	load_16bit_pcm(Sint8* filename, int sampleRate, Bool shouldLoop, Bool addSilenceAtStart);
 short	load_8bit_pcm(Sint8* filename, int sampleRate, Bool shouldLoop, Bool addSilenceAtStart);
-short	load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate);
-short	load_8bit_pcm_with_fm_padding(Sint8* filename, int sampleRate);
+short	load_16bit_pcm_with_fm_padding(Sint8* filename, int sampleRate, Bool addSilenceAtStart);
+short	load_8bit_pcm_with_fm_padding(Sint8* filename, int sampleRate, Bool addSilenceAtStart);
 short	load_adx(Sint8* filename);
 void	load_drv(int master_adx_frequency);
 

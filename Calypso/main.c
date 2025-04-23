@@ -1412,8 +1412,10 @@ short patch_offset = 0;
 
 short test = 0;
 
+const edit_option ph = { "", 0, 0, 0, 0 };
+
 const edit_option sample_options[NUM_PCM_OPTIONS] = {
-		{"         Loop Type", 1, 0, 3, DISP_LOOPTYPE},
+		ph,
 		{"      Sample Start", 0x100, 0, 0, DISP_SAMPLESTART},
 		{" Loop Start Offset", 0x100, 0, 0, DISP_LOOPSTART},
 		{"   Loop End Offset", 0x100, 0, 0, DISP_LOOPEND},
@@ -1422,12 +1424,15 @@ const edit_option sample_options[NUM_PCM_OPTIONS] = {
 		{"         Loop Mask", 1, 0, 1, DISP_ONOFF},
 };
 
+const edit_option pcm_allow_no_loop = { "         Loop Type", 1, 0, 3, DISP_LOOPTYPE };
+const edit_option pcm_forbid_no_loop = { "         Loop Type", 1, 1, 3, DISP_LOOPTYPE };
+
 const edit_option sample_option = { "Sample", 4, 0, NUM_SAMPLES, DISP_SELECTOR };
 
 const edit_option multi_samp = { "   Sample ID", 4, 0, NUM_SAMPLES - 1, DISP_MULTIDATA };
 const edit_option multi_splt = { "         Sample ID", 4, 0, NUM_SAMPLES - 1, DISP_UNSIGNEDHEX };
 const edit_option multi_note = { "       Cutoff Note", 12, 0, 95, DISP_NOTE };
-const edit_option ph = { "", 0, 0, 0, 0 };
+
 
 // multi_option's options are decided dynamically, so their values are (p)lace(h)olders
 const edit_option multi_options[NUM_MULT_OPTIONS] = {
@@ -2299,6 +2304,10 @@ void			my_draw(void)
 			else if (current_editor == EDITOR_INST && editor->current_option >= INST_MACRO) {
 				current_value = offset_option(&(editor->options[INST_MACRO]), current_options[editor->current_option], move_left, coarse, samples[sample_editor.current_selector], false);
 			}
+			else if (current_editor == EDITOR_PCM && editor->current_option == PCM_LOOPTYPE) {
+				const edit_option* loop_option = (pcmNoLoopEnabled[samples[sample_editor.current_selector]] != 0) ? &pcm_allow_no_loop : &pcm_forbid_no_loop;
+				current_value = offset_option(loop_option, current_options[editor->current_option], move_left, coarse, samples[sample_editor.current_selector], false);
+			}
 			else {
 				current_value = offset_option(&(editor->options[editor->current_option]), current_options[editor->current_option], move_left, coarse, samples[sample_editor.current_selector], false);
 			}
@@ -2485,6 +2494,10 @@ void			my_draw(void)
 				else if (current_editor == EDITOR_INST && i >= INST_MACRO) {
 					print_option(1, text_offset, highlight_color, (i == editor->current_option), &(editor->options[INST_MACRO]), current_options[i], samples[sample_editor.current_selector], i - INST_MACRO + 1);
 				}
+				else if (current_editor == EDITOR_PCM && i == PCM_LOOPTYPE) {
+					const edit_option* loop_option = (pcmNoLoopEnabled[samples[sample_editor.current_selector]] != 0) ? &pcm_allow_no_loop : &pcm_forbid_no_loop;
+					print_option(1, text_offset, highlight_color, (i == editor->current_option), loop_option, current_options[i], samples[sample_editor.current_selector], 0);
+				}
 				else {
 					print_option(1, text_offset, highlight_color, (i == editor->current_option), &(editor->options[i]), current_options[i], samples[sample_editor.current_selector], 0);
 				}
@@ -2582,24 +2595,21 @@ void			jo_main(void)
 			jo_clear_screen_line(6);
 			jo_printf(1, 6, "%d bytes of sample data remain...", 0x7F800 - (int)scsp_load);
 			const sample_import* samp = &sample_data[i];
+			bool add_silence = (samp->silence_type == Add_Silence_At_Start || samp->silence_type == Add_Silence_Around_Sample);
+			if (i > 0 && (sample_data[i - 1].silence_type == Add_Silence_At_End || sample_data[i - 1].silence_type == Add_Silence_Around_Sample))
+				add_silence = true;
 			switch (samp->data_type) {
 			case PCM_8_Bit:
-				samples[i] = load_8bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), false);
+				samples[i] = load_8bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), add_silence);
 				break;
 			case PCM_16_Bit:
-				samples[i] = load_16bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), false);
-				break;
-			case PCM_8_Bit_With_Silence_At_Start:
-				samples[i] = load_8bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), true);
-				break;
-			case PCM_16_Bit_With_Silence_At_Start:
-				samples[i] = load_16bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), true);
+				samples[i] = load_16bit_pcm((Sint8*)(&samp->filename), samp->sample_rate, (samp->loop_type != No_Loop), add_silence);
 				break;
 			case PCM_8_Bit_With_FM_Padding:
-				samples[i] = load_8bit_pcm_with_fm_padding((Sint8*)(&samp->filename), samp->sample_rate);
+				samples[i] = load_8bit_pcm_with_fm_padding((Sint8*)(&samp->filename), samp->sample_rate, add_silence);
 				break;
 			case PCM_16_Bit_With_FM_Padding:
-				samples[i] = load_16bit_pcm_with_fm_padding((Sint8*)(&samp->filename), samp->sample_rate);
+				samples[i] = load_16bit_pcm_with_fm_padding((Sint8*)(&samp->filename), samp->sample_rate, add_silence);
 				break;
 			default:
 				error_state = 1;
@@ -2615,6 +2625,7 @@ void			jo_main(void)
 			option_values[EDITOR_PCM][i][PCM_BASE_NOTE] = samp->base_note;
 			option_values[EDITOR_PCM][i][PCM_BASE_PITCH] = (samp->sample_rate == 0) ? 0x11b : pcmCtrl[samples[i]].base_note;
 			option_values[EDITOR_PCM][i][PCM_LOOP_MASK] = samp->loop_mask;
+			pcmNoLoopEnabled[i] = (samp->silence_type == Add_Silence_At_End || samp->silence_type == Add_Silence_Around_Sample);
 
 			if (error_state == 0) {
 				if (samp->loop_type < No_Loop || samp->loop_type > Alternating_Loop) {
@@ -2635,6 +2646,9 @@ void			jo_main(void)
 				}
 				else if (samp->loop_mask != No_Loop_Mask && samp->loop_mask != Use_Loop_Mask) {
 					error_state = 8;
+				}
+				else if (pcmNoLoopEnabled[i] == 0 && samp->loop_type == No_Loop) {
+					error_state = 9;
 				}
 			}
 
@@ -2675,6 +2689,10 @@ void			jo_main(void)
 				case 8:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had a invalid loop mask!", samp->filename);
 					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, "(%d)", option_values[EDITOR_PCM][i][PCM_LOOP_MASK]);
+					break;
+				case 9:
+					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "'%s' had looping disabled", samp->filename);
+					jo_printf_with_color(1, 10, JO_COLOR_INDEX_Yellow, "without adding silence after its end!");
 					break;
 				default:
 					jo_printf_with_color(1, 9, JO_COLOR_INDEX_Yellow, "An entirely undocumented");

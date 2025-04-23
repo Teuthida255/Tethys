@@ -6,8 +6,13 @@ enum sample_import_types {
 	PCM_16_Bit = 1,
 	PCM_8_Bit_With_FM_Padding = 2,
 	PCM_16_Bit_With_FM_Padding = 3,
-	PCM_8_Bit_With_Silence_At_Start = 4,
-	PCM_16_Bit_With_Silence_At_Start = 5,
+};
+
+enum sample_silence_types {
+	No_Silence_Around_Sample = 0,
+	Add_Silence_At_Start = 1,
+	Add_Silence_At_End = 2,
+	Add_Silence_Around_Sample = 3,
 };
 
 enum sample_loop_types {
@@ -26,6 +31,7 @@ typedef struct {
 	const char filename[12];
 	const int sample_rate;
 	const short data_type;
+	const short silence_type;
 	const short loop_type;
 	const unsigned char loop_mask;
 	const unsigned short playback_start;
