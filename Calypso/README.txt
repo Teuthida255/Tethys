@@ -32,4 +32,5 @@ Special Thanks:
  -Euly (program testing)
  -ChiptunedRaijin (program testing)
  -The Beesh-Spweesh (error correction)
+ -celeriyacon (information on undocumented chip features)
  
