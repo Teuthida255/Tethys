@@ -43,18 +43,24 @@ To actually add your samples in, go back to the 'Calypso' folder and open 'sampl
 Each entry in the list itself consists of 8 data points that decide what and how samples should be loaded when Calypso starts, which are the following:
  -The name of your file, in all-caps and surrounded by double quote marks (e.g. sine128.raw becomes "SINE128.RAW")
  -The base sample rate of your file (setting this to 0 will use a default value designed to play 256-sample-long waveforms in tune)
- -The data format of your sample, set to one of 6 values based on the bit depth of your audio (either 8-bit or 16-bit) and some extra loading behaviors (these will be explained in more depth later in the 'HANDLING FM' section; if you're unsure, use the 'FM_Padding' settings for short waveform samples, 'Silence_At_Start' for longer samples you expect to use FM on, and the defaults for everything else):
+ -The data format of your sample, set to one of 6 values based on the bit depth of your audio (either 8-bit or 16-bit) and an optional extra loading behavior (these will be explained in more depth later in the 'HANDLING FM' section; if you're unsure, use the 'FM_Padding' settings for waveform samples whose length isn't 128 times a power of 2 (i.e. 128, 256, 512...)):
   -PCM_8_Bit
   -PCM_16_Bit
   -PCM_8_Bit_With_FM_Padding
   -PCM_16_Bit_With_FM_Padding
-  -PCM_8_Bit_With_Silence_At_Start
-  -PCM_16_Bit_With_Silence_At_Start
+ -Whether or not to add silence before and/or after the sample's data (adding silence before a sample is useful for avoiding errant behavior when using the sample as an FM modulator, while adding silence after is necessary if you want the option of not looping the sample):
+  -No_Silence_Around_Sample
+  -Add_Silence_At_Start
+  -Add_Silence_At_End
+  -Add_Silence_Around_Sample
  -The looping behavior of your sample; that is, what it should do once the sample reaches its loop end point:
-  -No_Loop (end the sample)
+  -No_Loop (end the sample; only permitted if the sample has silence added after it)
   -Forward_Loop (returns to the loop start point)
   -Reverse_Loop (same as Forward_Loop, but plays the looped part of the sample in reverse)
   -Alternating_Loop (Plays the looped part of the sample in reverse, but then plays the sample forwards again once it reaches the loop start point; also called 'ping-pong loop' by several audio programs)
+ -Whether or not to enable the undocumented 'loop mask' feature for the sample, which enables seamless loop wraparound (useful for FM waveforms) for samples with a loop length equal to 128 times a power of 2 (i.e. 128, 256, 512, etc.):
+  -No_Loop_Mask
+  -Use_Loop_Mask
  -The number of audio samples from the start of the file that the SCSP should begin the sample at. For reasons that should be clear, this cannot be larger than the size of the sample itself. This is usually 0, but some samples can benifit from setting it to another value (more on this in the 'HANDLING FM' section).
  -The position of the sample's loop start point, in audio samples counting from the aforementioned sample start point. As such, the loop start point cannot be greater than the sample size minus the sample start point. Set this to 0 to loop the entire sample.
  -The position of the sample's loop end point, in audio samples counting from the sample start point. As such, it has the same restrictions on the loop start point, and cannot be lower than this value. Setting this to 0 will set the loop end point to the sample's endpoint.
@@ -78,10 +84,10 @@ Frequency modulation on the Sega Saturn works by using the modulators' audio pos
  _/     \_/     \_
  |<------|------>|    
 Read   Normal   Read
-Point  Read 	Point
-w/FM   Point	w/FM
+Point  Read     Point
+w/FM   Point    w/FM
 
-This method does not check for loop points or the edges of a sample's data, so a sufficiently strong modulator sufficiently close to the start of end of a sample will cause it to read sample data outside its intended range:
+Unless the sample uses the loop mask (which comes with its own set of restrictions), this method does not check for loop points or the edges of a sample's data, so a sufficiently strong modulator sufficiently close to the start of end of a sample will cause it to read sample data outside its intended range:
 
      _       _
     / \     / \
@@ -89,10 +95,10 @@ This method does not check for loop points or the edges of a sample's data, so a
 w  w    \_/      ~
  |<------|------>|    
 Other  Normal   Also
-Data   Read 	Other
-   	Point	Data
+Data   Read     Other
+       Point    Data
 
-As such, any sample that you want to perform modulation on needs some kind of padding in its data to lower the odds of this scenario playing out (unless you're into that sort of thing). The 'With_FM_Padding' settings in the sample load list accomplish this by repeatedly loading the sample in consecutive parts of memory and placing the sample start and loop points for the sample in the central waveform, which works wonders for simple looping samples, but is ill-suited to more complex samples with large differences between their beginnings and ends. If a sample fades in, you can solve one half of the problem using the 'With_Silence_At_Start' options, which will insert silence in between the new sample and the one before it; you can guard the end of the sample by using an external editor to insert around 128 audio samples of either silence (if the sample fades out) or the start of the sample's loop area (if the sample does not) and setting the loop end point of the sample to the start of this padding region. For certain types of samples, like the raw noise sample included with Calypso, you can also guard against FM bugs by simply setting the sample start point to somewhere later in the sample.
+As such, any non-maskable sample that you want to perform modulation on needs some kind of padding in its data to lower the odds of this scenario playing out (unless you're into that sort of thing). The 'With_FM_Padding' settings in the sample load list accomplish this by  repeatedly loading the sample in consecutive parts of memory and placing the sample start and loop points for the sample in the central waveform, which works wonders for simple looping samples, but is ill-suited to more complex samples with large differences between their beginnings and ends. If a sample fades in, you can solve one half of the problem using the 'With_Silence_At_Start' options, which will insert silence in between the new sample and the one before it; you can guard the end of the sample by using an external editor to insert around 128 audio samples of either silence (if the sample fades out) or the start of the sample's loop area (if the sample does not) and setting the loop end point of the sample to the start of this padding region. For certain types of samples, like the raw noise sample included with Calypso, you can also guard against FM bugs by simply setting the sample start point to somewhere later in the sample.
 
 (Important note: in my youthful ignorance, I originally stated in this document that FM modulation couldn't displace audio by more than 128 samples, and I designed the FM padding feature with that number in mind. As it turns out, my estimate was off by a factor of at least 64, making the real maximum displacement somewhere in the range of 8192 samples. Loading 128 sine wave samples into the SCSP doesn't do anyone any good, though, so I've simply accepted the shortcomings of SCSP FM and set the padding value to 256.)
 

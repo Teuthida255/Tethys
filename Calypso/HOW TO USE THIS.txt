@@ -120,8 +120,8 @@ Register Detune* (-0x4000 to 0x4000):
  Directly raises or lowers the Channel's calculated pitch register value by the given value. Although this is inadequate for microtonality (as any FamiTracker user can attest to), the fact that it always detunes the Instrument makes it useful for creating phasing effects in a Patch.
 
 
-Hold Mode (On/Off):
- If on, the attack phase of the Instrument's volume envelope will become a hold phase, where the Instrument stays at the maximum volume for a length of time given by the 'Attack/Hold' parameter.
+Hold Mode (Off/Attack/All):
+ If set to Attack, the attack phase of the Instrument's volume envelope will become a hold phase, where the Instrument stays at the maximum volume for a length of time given by the 'Attack/Hold' parameter. If set to All, all phases of the envelope will become hold phases; since this includes the enveolpe's release phase, this effectively causes the Instrument to play indefinitely.
 
 Attack (0 to 31, 0 disables):
  Determines the speed of the attack phase of the Instrument's volume envelope. 31 is the fastest speed (instantly ramping up to the maximum volume) and 1 is the slowest speed, while 0 disables the attack phase (and thus the rest of the envelope - I don't recommend setting this). If the 'Hold Mode' parameter is on, the attack phase will stay at the maximum volume for the same amount of time it would've taken to reach that volume normally.
@@ -214,8 +214,10 @@ Macro ID (0 to 63, can also be disabled entirely):
 
  You can access the Sample Editor by moving one layer up from the Instrument Editor (TAB + Up on a keyboard, Y on a controller). Each slot in the editor allows you to edit the basic properties of one of the 32 samples loaded in when Calypso begins; since these parameters are applied to the Sample directly, they will affect all Instruments that use the sample.
 
-Loop Type (None, Forward, Reverse, Alternating):
+Loop Type (None*, Forward, Reverse, Alternating):
  This sets the behavior of the Sample when it reaches the end of its loop area. None ends playback at this point, Forward returns to the start of the loop area, Reverse works similarly to Forward but with reversed playback during the looped section, and Alternating reverses playback when the end of the loop area is reached and returns to forward playback when the start of the loop area has been reached again (often called a 'ping-pong loop' in many audio programs). 
+
+ *Due to a bug in the SCSP's design that affects non-looping samples, the 'None' option for the parameter actually works by setting the loop point to an area of silence after the sample. As such, this option can only be applied to samples configured to load this silence; all other samples will have just the last three looping options available (check the included 'HOW TO CHANGE THE SAMPLES' text file for more information).
 
  (Note: The SCSP (or, at least, how Mednafen implements the SCSP) is afflicted with a pernicious bug that appears most often when using alternating and reverse loops. If the SCSP is asked to play a sample with a sufficiently small loop area (from a combination of the natural size of the loop area and the 'squeezing' of the loop area's size that comes with playing the sample at higher pitches), the playback cursor will 'skip' over the loop point, typically playing a large chunk of audio data beyond the intended end of the sample. As far as I'm aware, this problem cannot truly be prevented, but you can avoid the bug by avoiding alternating and reverse loops when using short looped samples at higher pitches.)
 
@@ -233,6 +235,9 @@ Base Pitch (-8:000 to 7:3FF):
 
 Base Note (c-8 to B-7):
  Sets the note at which the Sample will play its audio data at the 'Base Pitch' frequency value, allowing you to move your samples into concert pitch. Somewhere counterintuitively, raising this value lowers the pitch at which the Sample is played, and vice versa.
+
+Loop Mask (On/Off)
+ Sets the undocumented 'loop mask' flag when playing the Sample, which causes the Channel's playback offset (which determines which audio sample to from the start or loop point of the sample) to wrap around a smaller range of values. This is useful for preventing wavetable samples from being read outside of bounds when performing FM, but the function only works as intended when the size of the Sample's loop area is 128 * 2^n audio sample long (i.e. 128, 256, 512...).
 
 
 Below is a list of the samples included with Calypso by default, and some of their intended uses. Check the 'HOW TO CHANGE THE SAMPLES' text file for information on replacing these with your own audio.
@@ -319,6 +324,9 @@ The property a Macro affects is determined by its 'Type' parameter, which can be
 'TRTS' - Sample Traits* (0 (None) to 7 (Bit Reverse + Invert + Noise)):
  Affects the Instrument's 'Bit Reverse Sample', 'Invert Sample' and 'Noise Only' parameters. Each parameter is represented by a single bit in a 3-bit value; from 0, add 1 to turn on bit reversal, add 2 to turn on inversion, and add 4 to turn on noise only mode.
 
+'LMSK' - Loop Mask* (On or Off):
+ Affects the 'Loop Mask' parameter used by the Instrument's Sample, and functions identically to it.
+
 'TLVL' - Total Level (0 to 255):
  Affects the Instrument's 'Total Level' parameter, and functions identically to it.
 
@@ -337,8 +345,8 @@ The property a Macro affects is determined by its 'Type' parameter, which can be
 'RDET' - Register Detune (-0x4000 to 0x4000):
  Affects the Instrument's 'Register Detune' parameter, and functions identically to it. Much like the other detune type, values from this Macro are added to the Instrument's 'Register Detune' parameter instead of overriding it.
 
-'ETRT' - Envelope Traits* (0 (None) to 3 (Hold Mode + Loop Sync)):
- Affects the Instrument's 'Hold', 'Invert Sample' and 'Loop Sync' parameters. Each parameter is represented by a single bit in a 3-bit value; from 0, add 1 to turn on hold mode, and add 2 to turn on loop syncing.
+'ETRT' - Envelope Traits* (0 (None) to 5 (All Hold + Loop Sync)):
+ Affects the Instrument's 'Hold Mode' and 'Loop Sync' parameters. Values from 0 to 2 correspond to the 'Hold Mode' values 'None', 'Attack' and 'All', while adding 3 to either of these values also enables loop syncing.
 
 'ATTK' - Attack/Hold (0 to 31):
  Affects the Instrument's 'Attack/Hold' parameter, and functions identically to it.
